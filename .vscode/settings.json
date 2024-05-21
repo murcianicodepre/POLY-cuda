@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "*.poly": "yaml",
+        "random": "cpp",
+        "iostream": "cpp"
+    }
+}

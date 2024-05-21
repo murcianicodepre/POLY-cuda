@@ -1,0 +1,54 @@
+#bump demo
+debug:
+
+
+camera:
+  position: [0.0, 0.0, 0.0]
+  fov: 50.0
+
+materials:
+  - name: "sky_mat"
+    texture: "textures/sky3.png"
+    diffuse: 0.0
+    specular: 0.0
+  - name: "mat"
+    texture: "textures/cobblestone.png"
+    bump: "textures/cobblestone_bump.png"
+    diffuse: 2.0
+    specular: 32.0
+  - name: "mat2"
+    color: [0,255,0]
+    diffuse: 0.0
+    specular: 0.0
+    refractive: 1.3
+  - name: "mat3"
+    color: [255,255,255]
+    diffuse: 2.0
+    specular: 32.0
+    reflective: 1.0
+  
+objects:
+  - name: "sky"
+    file: "models/sky.ply"
+    material: "sky_mat"
+    flags:
+      - DISABLE_SHADING
+    transforms:
+      scale: 3.0
+      move: [0.0, 0.0, 1.5]
+
+  - name: "sphere2"
+    file: "models/sphere.ply"
+    material: "mat2"
+    transforms:
+      move: [0.0, 0.0, 3.0]
+
+lights:
+  - type: point
+    position: [-0.5, 1.0, 0.5]
+    color: [255,255,255]
+    intensity: 0.8
+  - type: point
+    position: [0.4, -0.5, 0.5]
+    color: [255,0,0]
+    intensity: 0.0

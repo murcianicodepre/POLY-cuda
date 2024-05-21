@@ -1,0 +1,16 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "debug build poly-cuda",
+            "type": "cuda-gdb",
+            "request": "launch",
+            "program": "${workspaceRoot}/poly-cuda",
+            "args": "-i=demo/duck.poly",
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "preLaunchTask": "build poly-cuda",
+        }
+    ]
+}

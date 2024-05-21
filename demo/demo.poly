@@ -1,0 +1,40 @@
+# demo.poly
+
+camera:
+  position: [0.0, 0.0, 0.0]
+  fov: 50.0
+
+materials:
+  - name: "sky_mat"
+    texture: "textures/sky3.png"
+    diffuse: 0.0
+    specular: 0.0
+  - name: "mat1"
+    texture: "textures/demo_texture.png"
+    bump: "textures/bump.png"
+    diffuse: 2.0
+    specular: 32.0
+
+
+objects:
+  - name: "sky"
+    file: "models/sky.ply"
+    material: "sky_mat"
+    flags:
+      - DISABLE_SHADING
+    transforms:
+      scale: 5.0
+      move: [0.0, 0.0, 3.0]
+
+  - name: "obj"
+    file: "models/cube.ply"
+    material: "mat1"
+    transforms:
+      scale: 0.5
+      move: [0.0, -0.5, 2.0]
+
+lights:
+  - type: directional
+    direction: [0.5, 0.5, -1.0]
+    color: [255,255,255]
+    intensity: 0.7

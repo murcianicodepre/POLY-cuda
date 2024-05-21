@@ -1,0 +1,96 @@
+# klein.poly ~ refraction test
+
+camera:
+  position: [0.2, 0.5, -0.5]
+  fov: 35.0
+  lookAt: [0.0, 0.2, 1.0]
+
+materials:
+  - name: "skymat"
+    texture: "textures/sky3.png"
+    diffuse: 0.0
+    specular: 0.0
+
+  - name: "mat1"
+    color: [255,0,0]
+    diffuse: 2.0
+    specular: 32.0
+    refractive: 1.5
+
+  - name: "mat2"
+    color: [0,255,255]
+    diffuse: 2.0
+    specular: 32.0
+    refractive: 1.333
+
+  - name: "mat3"
+    color: [255,255,0]
+    diffuse: 2.0
+    specular: 32.0
+    refractive: 1.7442
+    
+  - name: "tablemat"
+    texture: "textures/table.png"
+    bump: "textures/table_bump.png"
+    diffuse: 2.0
+    specular: 32.0
+    reflective: 0.3
+
+objects:
+  - name: "sky"
+    file: "models/sky.ply"
+    material: "skymat"
+    flags:
+      - DISABLE_SHADING
+    transforms:
+      scale: 3.0
+      move: [0.0, 0.0, 2.0]
+
+  - name: "klein"
+    file: "models/klein.ply"
+    material: "mat1"
+    transforms:
+      scale: 0.25
+      rotate: [0.0, 20.0, 0.0]
+      move: [0.0, -0.09, 1.1]
+
+  - name: "klein2"
+    file: "models/klein.ply"
+    material: "mat2"
+    transforms:
+      scale: 0.18
+      move: [-0.25, -0.09, 0.8]
+
+  - name: "klein3"
+    file: "models/klein.ply"
+    material: "mat3"
+    transforms:
+      scale: 0.20
+      rotate: [0.0, -190.0, 0.0]
+      move: [0.3, -0.09, 1.2]
+
+  - name: "table"
+    file: "models/table.ply"
+    material: "tablemat"
+    transforms:
+      scale: 0.25
+      move: [0.0, -0.10, 1.1]
+
+lights:
+  - type: point
+    position: [-0.5, 0.5, 1.1]
+    color: [255,0,0]
+    intensity: 0.6
+  - type: point
+    position: [0.5, 0.5, 1.1]
+    color: [0,255,0]
+    intensity: 0.6
+  - type: point
+    position: [0.0, 0.5, 1.6]
+    color: [0,0,255]
+    intensity: 0.6
+
+  - type: ambient
+    color: [255,0,255]
+    intensity: 0.1
+  
