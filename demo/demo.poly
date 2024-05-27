@@ -2,7 +2,7 @@
 
 camera:
   position: [0.0, 0.0, 0.0]
-  fov: 50.0
+  fov: 60.0
 
 materials:
   - name: "sky_mat"
@@ -10,7 +10,7 @@ materials:
     diffuse: 0.0
     specular: 0.0
   - name: "mat1"
-    texture: "textures/demo_texture.png"
+    texture: "textures/beso.png"
     bump: "textures/bump.png"
     diffuse: 2.0
     specular: 32.0
@@ -22,15 +22,17 @@ objects:
     material: "sky_mat"
     flags:
       - DISABLE_SHADING
+      - DISABLE_RENDERING
     transforms:
       scale: 5.0
       move: [0.0, 0.0, 3.0]
 
   - name: "obj"
-    file: "models/cube.ply"
+    file: "models/quad.ply"
     material: "mat1"
     transforms:
       scale: 0.5
+      rotate: [90.0, 180.0, 0.0]
       move: [0.0, -0.5, 2.0]
 
 lights:

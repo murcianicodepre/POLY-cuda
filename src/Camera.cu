@@ -5,12 +5,12 @@
     Diego Párraga Nicolás ~ diegojose.parragan@um.es
 */
 
-Ray::Ray() : ori(), dir() {}
-Ray::Ray(Vec3 ori, Vec3 dir) : ori(ori), dir(dir) {}
-Vec3 Ray::point(float t){ return dir * t + ori; }
+__device__ Ray::Ray() : ori(), dir(), color() {}
+__device__ Ray::Ray(Vec3 ori, Vec3 dir) : ori(ori), dir(dir), color() {}
+__device__ Vec3 Ray::point(float t){ return dir * t + ori; }
 
 Camera::Camera(Vec3 ori, Vec3 lookAt, float fov) : ori(ori), lookAt(lookAt), fov(fov*ALPHA) {}
-Ray Camera::rayTo(uint16_t x, uint16_t y){
+__device__ Ray Camera::rayTo(uint16_t x, uint16_t y){
     float aux = tanf(fov / 2.0f);
     float px = (2.0f * ((x + 0.5f)/WIDTH) - 1.0f) * aux * AR;
     float py = (1.0f - (2.0f * (y + 0.5f)/HEIGHT)) * aux;

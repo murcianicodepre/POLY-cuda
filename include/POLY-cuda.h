@@ -14,12 +14,19 @@
 #include <vector>
 #include <string>
 #include <cstring>
-#include <csignal>
-#include <optional>
 #include "png.h"
 #include "yaml-cpp/yaml.h"
 #include "yaml-cpp/exceptions.h"
 #include "cuda_runtime.h"
+#include "cuda_texture_types.h"
+
+/*#include "Vec.h"
+#include "RGBA.h"
+#include "Material.h"
+#include "Camera.h"
+#include "Poly.h"
+#include "PolyRenderer.h"
+#include "PolyShaders.h"*/
 
 using namespace std;
 
@@ -32,14 +39,21 @@ struct Hit;
 class Vertex;
 class Tri;
 class Material;
+class Texture;
+class Camera;
+class BVHNode;
+class Light;
+struct Scene;
+template<class T> class PolyArray;
 
 // Render pipeline defs
 constexpr uint16_t WIDTH = 1280;
 constexpr uint16_t HEIGHT = 960;
 constexpr uint16_t TEXTURE_SIZE = 1024;
-constexpr uint8_t TILE_SIZE = 32;
+constexpr uint8_t TILE_SIZE = 16;
 constexpr float AR = 1.33333f;
 constexpr uint8_t MAX_RAY_BOUNCES = 255u;
+constexpr uint8_t BVH_STACK_SIZE = 33u;
 
 // Individual tri rendering flags
 constexpr uint8_t DISABLE_RENDERING = 0x01u;
@@ -52,7 +66,7 @@ constexpr uint8_t DISABLE_REFLECTIONS = 0x40u;
 constexpr uint8_t DISABLE_REFRACTIONS = 0x80u;
 
 // Rendering pipeline flags
-constexpr uint8_t DISABLE_FAST_INTERSECTION_SHADER = 0x01u;
+// constexpr uint8_t DISABLE_FAST_INTERSECTION_SHADER = 0x01u;
 constexpr uint8_t FLAT_SHADING = 0x02u;
 
 // Math defs

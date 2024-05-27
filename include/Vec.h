@@ -22,6 +22,8 @@ public:
     __host__ __device__ Vec3 operator-(Vec3);
     __host__ __device__ Vec3 operator*(float);
     __host__ __device__ Vec3 operator*(Vec3);
+    __host__ __device__ float operator[](uint8_t i);
+    __host__ __device__ bool operator==(float);
     __host__ __device__ float length();
     __host__ __device__ Vec3 normalize();
     __host__ __device__ void rotateX(float);
@@ -40,7 +42,7 @@ public:
     __host__ __device__ Vec4();
     __host__ __device__ Vec4(float);
     __host__ __device__ Vec4(float, float, float, float);
-    __host__ __device__ Vec4(Vec3, float);
+    __host__ __device__ Vec4(Vec3, float w = 1.0f);
     __host__ __device__ Vec4(RGBA rgba);
     __host__ __device__ Vec4 operator+(float);
     __host__ __device__ Vec4 operator+(Vec4);

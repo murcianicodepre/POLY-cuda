@@ -8,10 +8,10 @@ materials:
   
   - name: "duck_mat"
     texture: "textures/duck.png"
-    color: [255,255,0]
     bump: "textures/duck_bump.png"
     diffuse: 2.0
     specular: 32.0
+    reflective: 0.5
     
   - name: "mat"
     color: [0,255,0]

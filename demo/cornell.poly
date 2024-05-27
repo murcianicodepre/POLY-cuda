@@ -1,10 +1,5 @@
 # cornell demo 
 
-global:
-  - DISABLE_SHADOWS
-  - DISABLE_REFRACTIONS
-  - DISABLE_BUMP
-
 camera:
   position: [0.0, 0.0, 0.0]
   fov: 40.0

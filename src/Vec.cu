@@ -19,6 +19,8 @@ Vec3 Vec3::operator-(float f) { return Vec3(x-f, y-f, z-f); }
 Vec3 Vec3::operator-(Vec3 v) { return Vec3(x-v.x, y-v.y, z-v.z); }
 Vec3 Vec3::operator*(float f) { return Vec3(x*f, y*f, z*f); }
 Vec3 Vec3::operator*(Vec3 v) { return Vec3(x*v.x, y*v.y, z*v.z); }
+float Vec3::operator[](uint8_t i) { return i==0 ? x : (i==1 ? y : z); }
+bool Vec3::operator==(float f) { return x==f && y==f & z==f; }
 float Vec3::length(){ return sqrtf(x*x + y*y + z*z); }
 Vec3 Vec3::normalize(){ float m = length(); return (m>0.0f) ? Vec3(x/m, y/m, z/m) : Vec3(x,y,z); }
 void Vec3::rotateX(float r){

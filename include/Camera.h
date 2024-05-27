@@ -12,6 +12,7 @@
 class Ray {
 public:
     Vec3 ori, dir;
+    Vec4 color;
     uint8_t medium = 0u;
     __device__ Ray();
     __device__ Ray(Vec3, Vec3);

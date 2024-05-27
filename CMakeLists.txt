@@ -8,6 +8,7 @@ project(poly-cuda LANGUAGES CXX CUDA)
 find_package(PNG REQUIRED)
 find_package(yaml-cpp REQUIRED)
 find_package(CUDA REQUIRED)
+find_package(OpenMP REQUIRED)
 
 # Some configuration
 set(CMAKE_INSTALL_PREFIX "/usr/local/bin")
@@ -17,6 +18,8 @@ set(CUDA_STANDARD 17)
 set(CMAKE_CUDA_ARCHITECTURES 75)
 set(SRC_DIR "src")
 set(INC_DIR "include")
+
+set(CMAKE_BUILD_TYPE Release)
 
 # Build options
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
@@ -29,6 +32,9 @@ set(CU_SOURCES
     ${SRC_DIR}/Vec.cu
     ${SRC_DIR}/RGBA.cu
     ${SRC_DIR}/Material.cu
+    ${SRC_DIR}/Poly.cu
+    ${SRC_DIR}/Camera.cu
+    ${SRC_DIR}/Light.cu
     ${SRC_DIR}/PolyRenderer.cu
     ${SRC_DIR}/PolyShaders.cu
 )
@@ -47,6 +53,7 @@ target_link_libraries(poly-cuda
     PNG::PNG
     ${YAML_CPP_LIBRARIES}
     ${CUDA_LIBRARIES}
+    OpenMP::OpenMP_CXX
 )
 target_include_directories(poly-cuda PRIVATE ${INC_DIR} ${CUDA_INCLUDE_DIRS})
 
