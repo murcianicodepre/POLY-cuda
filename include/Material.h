@@ -9,24 +9,14 @@
 #include "POLY-cuda.h"
 #include "RGBA.h"
 
-class Texture {
-public:
-    cudaArray_t _array;
-    cudaTextureObject_t _obj;
-    Texture();
-    Texture(const char*);
-    __device__ Vec4 tex2d(float, float);
-};
-
 class Material{
 public:
-    Texture tex;
-    RGBA* texture, * bump;
+    cudaTextureObject_t texture, bump;
     RGBA color;
     float diff, spec, reflective, refractive;
     Material(float diff, float spec, float reflective, float refractive);
-    void loadTexture(const char* path);
-    void loadBump(const char* path);
+    cudaArray_t loadTexture(const char* path);
+    cudaArray_t loadBump(const char* path);
 };
 
 #endif

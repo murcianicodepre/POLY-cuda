@@ -13,6 +13,7 @@ Vec3::Vec3(RGBA rgb) :
     x(static_cast<float>(rgb.r)/255.0f),
     y(static_cast<float>(rgb.g)/255.0f),
     z(static_cast<float>(rgb.b)/255.0f) {}
+Vec3::Vec3(float4 xyzw) : x(xyzw.x), y(xyzw.y), z(xyzw.z) {}
 Vec3 Vec3::operator+(float f) { return Vec3(x+f, y+f, z+f); }
 Vec3 Vec3::operator+(Vec3 v) { return Vec3(x+v.x, y+v.y, z+v.z); }
 Vec3 Vec3::operator-(float f) { return Vec3(x-f, y-f, z-f); }
@@ -53,6 +54,7 @@ Vec4::Vec4(RGBA rgba) :
     y(static_cast<float>(rgba.g)/255.0f),
     z(static_cast<float>(rgba.b)/255.0f),
     w(static_cast<float>(rgba.a)/255.0f) {}
+Vec4::Vec4(float4 xyzw) : x(xyzw.x), y(xyzw.y), z(xyzw.z), w(xyzw.w) {} 
 Vec4 Vec4::operator+(float f){ return Vec4(x+f, y+f, z+f, w+f); }
 Vec4 Vec4::operator+(Vec4 v){ return Vec4(x+v.x, y+v.y, z+v.z, w+v.w); }
 Vec4 Vec4::operator+(Vec3 v){ return Vec4(x+v.x, y+v.y, z+v.z, w); }

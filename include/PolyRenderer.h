@@ -23,7 +23,6 @@ public:
     BVHNode();
     __device__ bool intersectAABB(Ray&);
 };
-__device__ void intersectBVH(Ray&, Hit&, Tri*, BVHNode*, uint32_t*, uint32_t, uint16_t discard = 0x0000u);
 
 // Fixed size arrays
 template<class T> class PolyArray {
@@ -32,19 +31,6 @@ public:
     uint32_t size;
     PolyArray(T, uint32_t);
     PolyArray() : data(nullptr), size(0) {} 
-};
-
-// Contains all scene data in GPU global memory
-struct Polydata {
-    Camera* cam;
-    PolyArray<Tri*> tris;
-    PolyArray<Material*> mats;
-    PolyArray<BVHNode*> bvh;
-    uint32_t* triIdx;
-    uint16_t flags;
-    
-    Polydata() : cam(nullptr), tris(nullptr, 0), mats(nullptr, 0), bvh(nullptr, 0), flags(0x0000u) {}
-    ~Polydata();
 };
 
 // Contains all the scene data for the GPU
@@ -74,9 +60,10 @@ public:
     Camera* _cam;
     BVHNode* _bvh;
 
+    vector<cudaArray_t> _cuArrays;
+
     PolyRenderer();
     ~PolyRenderer();
-    Polydata* toGPU();
 
     // Main program functions
     bool loadScene(const char* scene);
@@ -90,7 +77,7 @@ public:
     __host__ void subdivide(uint32_t nodeId);
 
     // Other renderer functions
-    static RGBA* loadPNG(const char* path, bool toGpu = true);
+    static RGBA* loadPNG(const char* path);
     static void savePNG(const char* path, RGBA* texture);
     static const char* getCpu();
     static const char* getGpu(cudaDeviceProp&);

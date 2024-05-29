@@ -20,14 +20,6 @@
 #include "cuda_runtime.h"
 #include "cuda_texture_types.h"
 
-/*#include "Vec.h"
-#include "RGBA.h"
-#include "Material.h"
-#include "Camera.h"
-#include "Poly.h"
-#include "PolyRenderer.h"
-#include "PolyShaders.h"*/
-
 using namespace std;
 
 // Forward class declaration
@@ -39,7 +31,6 @@ struct Hit;
 class Vertex;
 class Tri;
 class Material;
-class Texture;
 class Camera;
 class BVHNode;
 class Light;

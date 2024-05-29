@@ -145,20 +145,13 @@ __device__ Vec4 fragment_shader(Hit& hit, Scene* scene, uint8_t flags){
 
 // Maps a texture pixel to a hit
 __device__ Vec4 texture_mapping(Hit& hit, Material& mat){
-    if(mat.texture){
-        uint16_t tx = hit.u * (TEXTURE_SIZE - 1); tx %= (TEXTURE_SIZE-1);
-        uint16_t ty = hit.v * (TEXTURE_SIZE - 1); ty %= (TEXTURE_SIZE-1);
-        return Vec4(mat.texture[tx + ty* TEXTURE_SIZE]);
-    } else return Vec4(mat.color);
+    uint2 pixelCoord = make_uint2(blockIdx.x * blockDim.x + threadIdx.x, blockIdx.y * blockDim.y + threadIdx.y);
+    return (mat.texture) ? Vec4(tex2D<float4>(mat.texture, hit.u, hit.v)) : Vec4(mat.color);
 }
 
 // Computes hit surface normal using a bump texture
 __device__ Vec3 bump_mapping(Hit& hit, Tri& tri, Material& mat){
     if(mat.bump){
-        // Convert to tangent coordinates and compute normal vector using bump texture https://learnopengl.com/Advanced-Lighting/Normal-Mapping
-        uint16_t tx = hit.u * (TEXTURE_SIZE - 1); tx %= (TEXTURE_SIZE-1);
-        uint16_t ty = hit.v * (TEXTURE_SIZE - 1); ty %= (TEXTURE_SIZE-1);
-
         // Compute tangent and bitangent
         Vec3 e1 = tri.b.xyz - tri.a.xyz, e2 = tri.c.xyz - tri.a.xyz;
         float du1 = tri.b.u - tri.a.u, dv1 = tri.b.v - tri.a.v;
@@ -166,10 +159,9 @@ __device__ Vec3 bump_mapping(Hit& hit, Tri& tri, Material& mat){
         float f = 1.0f / (du1 * dv2 - du2 * dv1);
 
         Vec3 tangent = Vec3(f * (dv2 * e1.x - dv1 * e2.x), f * (dv2 * e1.y - dv1 * e2.y), f * (dv2 * e1.z - dv1 * e2.z)).normalize();
-        // TODO: due to blender fix, (0,0) texture coordinate is left-down, not left-up
         Vec3 bitangent = Vec3(f * (du2 * e1.x - du1 * e2.x), f * (du2 * e1.y - du1 * e2.y), f * (du2 * e1.z - du1 * e2.z)).normalize();
 
-        Vec3 bumpMap = Vec3(mat.bump[tx + ty*TEXTURE_SIZE]) * 2.0f - 1.0f;
+        Vec3 bumpMap = Vec3(tex2D<float4>(mat.bump, hit.u, hit.v)) * 2.0f - 1.0f;
 
         return (tangent * bumpMap.x + bitangent * bumpMap.y + hit.phong * bumpMap.z).normalize();
     } else return hit.phong;

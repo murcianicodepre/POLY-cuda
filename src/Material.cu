@@ -6,39 +6,31 @@
     Diego Párraga Nicolás ~ diegojose.parragan@um.es
 */
 
-Texture::Texture() : _obj(), _array() {}
-Texture::Texture(const char* path){
-    RGBA* tex = PolyRenderer::loadPNG(path, false);
+cudaArray_t createTexture(const char* path, cudaTextureObject_t& texObj){
+    // Load texture into host memory
+    uchar4* texData = reinterpret_cast<uchar4*>(PolyRenderer::loadPNG(path));
 
-    cudaChannelFormatDesc desc = cudaCreateChannelDesc<uchar4>();
-    cudaerr(cudaMallocArray(&_array, &desc, TEXTURE_SIZE, TEXTURE_SIZE));
-    cudaerr(cudaMemcpyToArray(_array, 0,0, (void*) tex, sizeof(RGBA) * TEXTURE_SIZE * TEXTURE_SIZE, cudaMemcpyHostToDevice));
-
-    struct cudaResourceDesc res;
-    memset(&res, 0, sizeof(res));
-    res.resType = cudaResourceTypeArray;
-    res.res.array.array = _array;
-
-    struct cudaTextureDesc texDesc;
-    memset(&texDesc, 0, sizeof(texDesc));
-    texDesc.addressMode[0] = cudaAddressModeWrap; texDesc.addressMode[1] = cudaAddressModeWrap;
+    // Channel descriptor and cuda Array
+    cudaArray_t texArray;
+    cudaChannelFormatDesc chanDesc = cudaCreateChannelDesc<uchar4>();
+    cudaMallocArray(&texArray, &chanDesc, TEXTURE_SIZE, TEXTURE_SIZE);
+    cudaMemcpy2DToArray(texArray, 0,0, texData, TEXTURE_SIZE*sizeof(uchar4), TEXTURE_SIZE*sizeof(uchar4), TEXTURE_SIZE, cudaMemcpyHostToDevice);
+    cudaResourceDesc resDesc = {};
+    resDesc.resType = cudaResourceTypeArray;
+    resDesc.res.array.array = texArray;
+    cudaTextureDesc texDesc = {};
+    texDesc.addressMode[0] = cudaAddressModeWrap;
+    texDesc.addressMode[1] = cudaAddressModeWrap;
     texDesc.filterMode = cudaFilterModeLinear;
     texDesc.readMode = cudaReadModeNormalizedFloat;
-    texDesc.normalizedCoords = 1;
+    texDesc.normalizedCoords = true;
+    cudaCreateTextureObject(&texObj, &resDesc, &texDesc, nullptr);
+    
+    free(texData);
 
-    _obj = 0;
-    cudaerr(cudaCreateTextureObject(&_obj, &res, &texDesc, NULL));
-
-    free(tex);
-}
-__device__ Vec4 Texture::tex2d(float u, float v){
-    uchar4 tex = tex2D<uchar4>(_obj, u, v);
-    return Vec4(tex.x / 255.0f, tex.y / 255.0f, tex.z / 255.0f, tex.w / 255.0f);
+    return texArray;
 }
 
-Material::Material(float diff, float spec, float reflective, float refractive) : texture(NULL), bump(NULL), diff(diff), spec(spec), reflective(reflective), refractive(refractive) {}
-void Material::loadTexture(const char* path){ 
-    texture = PolyRenderer::loadPNG(path); 
-    // tex = Texture(path);
-}
-void Material::loadBump(const char* path){ bump = PolyRenderer::loadPNG(path); }
+Material::Material(float diff, float spec, float reflective, float refractive) : texture(0), bump(0), diff(diff), spec(spec), reflective(reflective), refractive(refractive) {}
+cudaArray_t Material::loadTexture(const char* path){ return createTexture(path, texture); }
+cudaArray_t Material::loadBump(const char* path){ return createTexture(path, bump); }

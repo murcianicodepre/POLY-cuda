@@ -87,31 +87,7 @@ void PolyRenderer::subdivide(uint32_t nodeId){
     subdivide(leftIdx); subdivide(rightIdx);
 }
 
-__device__ void intersectBVH(Ray& ray, Hit& hit, Tri* tris, BVHNode* bvh, uint32_t* triIdx, uint32_t nodeId, uint16_t discard){
-    BVHNode& node = bvh[nodeId];
-    if(!node.intersectAABB(ray)) return;
-    if(node.n>0){   // Leaf node; leftFirst contains the index of the first tri
-        Hit aux;
-        for(uint32_t i=0; i<node.n; i++){
-            uint32_t triId = triIdx[node.leftOrFirst+i];
-            Tri& tri = tris[triIdx[node.leftOrFirst+i]];
-
-            // Discard tri if matches discard
-            if(tri.flags & discard) continue;
-
-            // Tri intersection test
-            if(tri.intersect(ray, aux) && (aux.t < hit.t)){
-                hit = aux; hit.triId = triId;
-            }
-        }
-
-    } else {    // Node is not leaf, so leftFirst contains the index of the child nodes
-        intersectBVH(ray, hit, tris, bvh, triIdx, node.leftOrFirst, discard);
-        intersectBVH(ray, hit, tris, bvh, triIdx, node.leftOrFirst + 1, discard);
-    }
-}
-
-PolyRenderer::PolyRenderer(){
+PolyRenderer::PolyRenderer() : _tris(), _mats(), _lights(), _cam(nullptr), _cuArrays() {
     _frame = (RGBA*) malloc(sizeof(RGBA) * WIDTH * HEIGHT);
     memset((void*) _frame, 0, sizeof(RGBA) * WIDTH * HEIGHT);
 }
@@ -131,7 +107,7 @@ void cudaerr(cudaError_t err){
 // TODO bvh struct functions
 
 // Other renderer functions
-__host__ RGBA* PolyRenderer::loadPNG(const char* path, bool toGpu){
+__host__ RGBA* PolyRenderer::loadPNG(const char* path){
     FILE* input = fopen(path, "rb");
         if(!input){ PolyRenderer::polyMsg("\e[1;91m  err loading '" + string(path) + "': file could not be opened!\n\e[0m"); exit(EXIT_FAILURE); }
 
@@ -189,17 +165,7 @@ __host__ RGBA* PolyRenderer::loadPNG(const char* path, bool toGpu){
     if(fclose(input)==-1){ PolyRenderer::polyMsg("\e[1;91m  err closing '" + string(path) + "'\e[0m\n"); exit(EXIT_FAILURE); }
     PolyRenderer::polyMsg("\e[1;93m  loaded texture '" + string(path) + "'\e[0m\n");
     
-    if(toGpu){
-        // Copy texture into GPU global memory
-        RGBA* texture_d;
-        cudaerr(cudaMalloc((void**) &texture_d, sizeof(RGBA) * TEXTURE_SIZE * TEXTURE_SIZE));
-        cudaerr(cudaMemcpy((void*) texture_d, (void*) texture, sizeof(RGBA) * TEXTURE_SIZE * TEXTURE_SIZE, cudaMemcpyHostToDevice));
-
-        // Free host memory texture
-        free(texture);
-
-        return texture_d;
-    } else return texture;
+    return texture;
 }
 __host__ void PolyRenderer::savePNG(const char* path, RGBA* texture){
     FILE* output = fopen(path, "wb");
@@ -331,7 +297,7 @@ __host__ uint16_t PolyRenderer::parseFlags(YAML::Node node){
     return flags;
 }
 
-// TODO polyscript scene loader
+// Polyscript v2 scene loader
 bool PolyRenderer::loadScene(const char* scene){
     printf("\e[1;93m compiling '\e[95m%s\e[93m'\e[0m\n", scene);
 
@@ -371,10 +337,9 @@ bool PolyRenderer::loadScene(const char* scene){
                     float reflect = m["reflective"] ? m["reflective"].as<float>() : 0.0f, refract = m["refractive"] ? m["refractive"].as<float>() : 1.0f;
                     reflect = (reflect>1.0f) ? 1.0f : (reflect<0.0f ? 0.0f : reflect);
                     Material mat = Material(diff, spec, reflect, refract);
-                    if(m["texture"]) mat.loadTexture((script_path + m["texture"].as<string>()).c_str()); 
-                    else if(m["color"]) mat.color = parseColor(m["color"]);
-                    else { PolyRenderer::polyMsg("\e[1;91m  err parsing material: texture or color missing!\e[0m\n"); return false; }
-                    if(m["bump"]) mat.loadBump((script_path + m["bump"].as<string>()).c_str());
+                    if(m["texture"]) _cuArrays.push_back(mat.loadTexture((script_path + m["texture"].as<string>()).c_str())); 
+                    mat.color = (m["color"]) ? parseColor(m["color"]) : RGBA(Vec3(0.8f, 0.8f, 0.8f), 1.0f);
+                    if(m["bump"]) _cuArrays.push_back(mat.loadBump((script_path + m["bump"].as<string>()).c_str()));
 
                     // Push material and name at same index
                     _mats.push_back(mat);
@@ -457,18 +422,6 @@ bool PolyRenderer::loadScene(const char* scene){
     for(auto s : msgvector) { printf("%s", s.c_str());}
 
     return true;
-}
-
-Polydata* PolyRenderer::toGPU(){
-    return nullptr;
-}
-
-Polydata::~Polydata(){
-    if(cam) cudaFree(cam);
-    if(tris.data) cudaFree(tris.data);
-    if(mats.data) cudaFree(mats.data);
-    if(bvh.data) cudaFree(bvh.data);
-    if(triIdx) cudaFree(triIdx);
 }
 
 bool PolyRenderer::render(){
@@ -554,10 +507,8 @@ bool PolyRenderer::render(){
     }
 
     // Free resources and reset GPU
-    for(Material m : _mats){
-        if(m.texture) cudaFree(m.texture);
-        if(m.bump) cudaFree(m.bump);
-    }
+    for(cudaArray_t array : _cuArrays)
+        cudaerr(cudaFreeArray(array));
     cudaFree(frame_d); cudaFree(scene_d); 
     cudaFree(scene.cam); cudaFree(tris_d); cudaFree(mats_d); cudaFree(lights_d); cudaFree(bvh_d); cudaFree(triIdx_d);
     cudaerr(cudaDeviceReset());

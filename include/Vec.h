@@ -16,6 +16,7 @@ public:
     __host__ __device__ Vec3(float);
     __host__ __device__ Vec3(float, float, float);
     __host__ __device__ Vec3(RGBA rgb);
+    __host__ __device__ Vec3(float4 xyzw);
     __host__ __device__ Vec3 operator+(float);
     __host__ __device__ Vec3 operator+(Vec3);
     __host__ __device__ Vec3 operator-(float);
@@ -44,6 +45,7 @@ public:
     __host__ __device__ Vec4(float, float, float, float);
     __host__ __device__ Vec4(Vec3, float w = 1.0f);
     __host__ __device__ Vec4(RGBA rgba);
+    __host__ __device__ Vec4(float4 xyzw);
     __host__ __device__ Vec4 operator+(float);
     __host__ __device__ Vec4 operator+(Vec4);
     __host__ __device__ Vec4 operator+(Vec3);

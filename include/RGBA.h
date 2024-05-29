@@ -13,7 +13,7 @@ public:
     uint8_t r,g,b,a;
     __host__ __device__ RGBA();
     __host__ __device__ RGBA(uint8_t r, uint8_t g, uint8_t b, uint8_t a);
-    __host__ __device__ RGBA(Vec3 vec, float a = 1.0f);
+    __host__ __device__ RGBA(Vec3 vec, float w = 1.0f);
     __host__ __device__ RGBA(Vec4 frag);
 };
 

@@ -31,9 +31,8 @@ objects:
     file: "models/quad.ply"
     material: "mat1"
     transforms:
-      scale: 0.5
       rotate: [90.0, 180.0, 0.0]
-      move: [0.0, -0.5, 2.0]
+      move: [0.0, 0.0, 2.0]
 
 lights:
   - type: directional
