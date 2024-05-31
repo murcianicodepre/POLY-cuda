@@ -55,6 +55,7 @@ public:
     __host__ __device__ Vec4 operator*(float);
     __host__ __device__ Vec4 operator*(Vec4);
     __host__ __device__ Vec4 operator*(Vec3);
+    __host__ __device__ bool operator==(float);
 };
 
 #endif

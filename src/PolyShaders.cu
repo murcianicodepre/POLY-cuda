@@ -8,21 +8,79 @@
     Diego Párraga Nicolás ~ diegojose.parragan@um.es
 */
 
+struct Entry {
+    Ray ray;
+    Hit hit;
+    Vec4 color;
+    bool hasIntersection = false, hasReflection = false, hasRefraction = false;
+};
+
 // Main pixel rendering entrypoint
 __global__ void compute_pixel(RGBA* frame, Scene* scene){
 
     // Get global pixel coordinates
     uint2 pixelCoord = make_uint2(blockIdx.x * blockDim.x + threadIdx.x, blockIdx.y * blockDim.y + threadIdx.y);
 
-    // Compute pixel color
-    Vec4 out;
-    Ray ray = scene->cam->rayTo(pixelCoord.x, pixelCoord.y);
-    Hit hit;
-    if(intersection_shader(ray, hit, scene)) 
-        out = fragment_shader(hit, scene);
+    // Rendering loop
+    Entry stack[MAX_RAY_BOUNCES + 1];
+    uint8_t i=0;
+    stack[i++] = { .ray = scene->cam->rayTo(pixelCoord.x, pixelCoord.y) };
+    while(i>0){
+        Entry& entry = stack[i-1];
 
-    // Store computed fragment as color in global frame
-    frame[pixelCoord.x + pixelCoord.y * WIDTH] = RGBA(out);
+        if(!entry.hasIntersection)
+            entry.hasIntersection = intersection_shader(entry.ray, entry.hit, scene);
+
+        if(entry.hasIntersection){
+            Hit& hit = entry.hit;
+            Tri& tri = scene->tris.data[hit.triId];
+            Material& mat = scene->mats.data[tri.matId];
+            uint16_t flags16 = scene->global | tri.flags;
+            uint8_t cont = i-1;
+
+            // REFLECTION STEP
+            if((i<=MAX_RAY_BOUNCES) && (!entry.hasReflection) && (mat.reflective>0.0f) && !(flags16 & DISABLE_REFLECTIONS)){
+                entry.hasReflection = true;
+                Vec3 rdir = hit.ray.dir - hit.phong * (Vec3::dot(hit.ray.dir, hit.phong) * 2.0f);
+                Ray rray = Ray(hit.point(), rdir); rray.medium = tri.matId;
+                stack[i++] = { .ray = rray};
+            }
+
+            // REFRACTION STEP
+            if((i<=MAX_RAY_BOUNCES) && (!entry.hasRefraction) && (mat.refractive<1.0f || mat.refractive>1.0f) && !(flags16 & DISABLE_REFRACTIONS)){
+                entry.hasRefraction = true;
+
+                Material& oldMat = scene->mats.data[entry.hit.ray.medium];
+                
+                float cosTheta1 = Vec3::dot(hit.ray.dir, hit.phong) * -1.0f, theta1 = acosf(cosTheta1);
+                float sinTheta2 = (oldMat.refractive / mat.refractive) * sinf(theta1);
+
+                Ray rray;
+
+                if(sinTheta2<1.0f){
+                    // Refraction
+                    Vec3 rdir = (hit.ray.dir + hit.phong * cosTheta1) * (oldMat.refractive / mat.refractive) - hit.phong * cosTheta1;
+                    rray = Ray(hit.point(), rdir); rray.medium = tri.matId;
+                } else {
+                    // Internal reflection
+                    Vec3 rdir = hit.ray.dir - hit.phong * (Vec3::dot(hit.ray.dir, hit.phong) * 2.0f);
+                    rray = Ray(hit.point(), rdir); rray.medium = tri.matId;
+                }
+
+                stack[i++] = { .ray = rray };
+            }
+
+            // Check if all child entries have been resolved
+            if(cont == (i-1)){
+                Vec4 frag = (entry.hasRefraction) ? fragment_shader(entry.hit, scene, DISABLE_SHADING) : fragment_shader(hit, scene);
+                Vec4 color = ((entry.hasRefraction) ? stack[i].color * frag * Vec3(0.9f) : frag) * Vec3(1.0f - mat.reflective) + stack[i].color * Vec3(mat.reflective);
+                
+                stack[--i].color = color;
+
+            }
+        } else i--;
+    }
+    frame[pixelCoord.x + pixelCoord.y * WIDTH] = RGBA(stack[0].color);
     
     // Wait in a barrier until all threads have finished
     __syncthreads();
@@ -31,11 +89,12 @@ __global__ void compute_pixel(RGBA* frame, Scene* scene){
 // Computes closest tri intersection
 __device__ bool intersection_shader(Ray& ray, Hit& hit, Scene* scene, uint8_t discard){
     Tri* tris = scene->tris.data;
+    Material* mats = scene->mats.data;
     BVHNode* bvh = scene->bvh;
     uint32_t* triIdx = scene->triIdx;
 
     uint32_t stack[BVH_STACK_SIZE];
-    int32_t i = 0;
+    uint8_t i = 0;
     stack[i++] = 0;
     while(i>0){
         BVHNode& node = bvh[stack[--i]];
@@ -44,6 +103,8 @@ __device__ bool intersection_shader(Ray& ray, Hit& hit, Scene* scene, uint8_t di
             Hit aux;
             for(uint32_t t=node.leftOrFirst; t<(node.n + node.leftOrFirst); t++){
                 Tri& tri = tris[triIdx[t]];
+                Material& mat = mats[tri.matId];
+                uint16_t flags16 = scene->global | tri.flags;
 
                 // Discard tri if matches with discard flag
                 if(tri.flags & discard) continue;
@@ -51,6 +112,11 @@ __device__ bool intersection_shader(Ray& ray, Hit& hit, Scene* scene, uint8_t di
                 // Intersection and depth tests
                 if(tri.intersect(ray, aux) && (aux.t < hit.t)){
                     hit = aux; hit.triId = triIdx[t]; hit.ray = ray;
+                    
+                    // BUMP MAPPING step
+                    hit.phong = (!(flags16 & DISABLE_BUMP) && !((flags16>>8) & FLAT_SHADING)) ?
+                                bump_mapping(hit, tri, mat) :
+                                hit.phong;
                 }
             }
         } else {
@@ -131,11 +197,6 @@ __device__ Vec4 fragment_shader(Hit& hit, Scene* scene, uint8_t flags){
     Vec4 tex = (!(flags16 & DISABLE_TEXTURES) && !((flags16>>8) & FLAT_SHADING)) ?
                 texture_mapping(hit, mat) :
                 Vec4(mat.color);
-
-    // BUMP MAPPING step
-    hit.phong = (!(flags16 & DISABLE_BUMP) && !((flags16>>8) & FLAT_SHADING)) ?
-                bump_mapping(hit, tri, mat) :
-                hit.phong;
 
     // SHADING step
     Vec3 shading = ((flags16 >> 8) & FLAT_SHADING) ? flat_shading(hit) : blinn_phong_shading(hit, scene, flags);

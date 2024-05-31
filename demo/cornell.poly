@@ -1,5 +1,8 @@
 # cornell demo 
 
+global:
+  # - DISABLE_REFLECTIONS
+
 camera:
   position: [0.0, 0.0, 0.0]
   fov: 40.0
@@ -32,6 +35,7 @@ materials:
     diffuse: 2.0
     specular: 32.0
     reflective: 0.5
+    refractive: 1.333
 
   - name: "mirror2"
     color: [255,255,255]

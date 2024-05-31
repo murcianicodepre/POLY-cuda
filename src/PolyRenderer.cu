@@ -490,6 +490,7 @@ bool PolyRenderer::render(){
 
     // Start timer and launch compute_pixel shader
     printf("\e[1;93m rendering in \e[92m%s ", getGpu(_gpu));
+    fflush(stdout);
     cudaerr(cudaEventRecord(tIni, 0));
 
     compute_pixel<<<grid, block>>> (frame_d, scene_d);
