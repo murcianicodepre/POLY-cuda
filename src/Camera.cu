@@ -5,8 +5,8 @@
     Diego Párraga Nicolás ~ diegojose.parragan@um.es
 */
 
-__device__ Ray::Ray() : ori(), dir(), color() {}
-__device__ Ray::Ray(Vec3 ori, Vec3 dir) : ori(ori), dir(dir), color() {}
+__device__ Ray::Ray() : ori(), dir() {}
+__device__ Ray::Ray(Vec3 ori, Vec3 dir, uint8_t medium) : ori(ori), dir(dir), medium(medium) {}
 __device__ Vec3 Ray::point(float t){ return dir * t + ori; }
 
 Camera::Camera(Vec3 ori, Vec3 lookAt, float fov) : ori(ori), lookAt(lookAt), fov(fov*ALPHA) {}

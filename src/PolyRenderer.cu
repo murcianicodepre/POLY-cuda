@@ -104,8 +104,6 @@ void cudaerr(cudaError_t err){
     if(err != cudaSuccess){ printf("\e[1;91mcudaerr! %s\e[0m\n", cudaGetErrorString(err)); exit(EXIT_FAILURE); }
 }
 
-// TODO bvh struct functions
-
 // Other renderer functions
 __host__ RGBA* PolyRenderer::loadPNG(const char* path){
     FILE* input = fopen(path, "rb");
@@ -425,7 +423,7 @@ bool PolyRenderer::loadScene(const char* scene){
 }
 
 bool PolyRenderer::render(){
-    constexpr uint32_t RENDERING_TOTAL_SIZE = sizeof(RGBA) * WIDTH * HEIGHT;
+    constexpr uint32_t FRAME_SIZE = sizeof(RGBA) * WIDTH * HEIGHT;
 
     // Abort rendering if global DISABLE_RENDERING is set
     if(static_cast<uint8_t>(_global) & DISABLE_RENDERING){
@@ -443,8 +441,8 @@ bool PolyRenderer::render(){
 
     // Allocate frame in GPU global memory
     RGBA* frame_d;
-    cudaerr(cudaMalloc((void**) &frame_d, RENDERING_TOTAL_SIZE));
-    cudaerr(cudaMemcpy((void*) frame_d, (void*) _frame, RENDERING_TOTAL_SIZE, cudaMemcpyHostToDevice));
+    cudaerr(cudaMalloc((void**) &frame_d, FRAME_SIZE));
+    cudaerr(cudaMemcpy((void*) frame_d, (void*) _frame, FRAME_SIZE, cudaMemcpyHostToDevice));
 
     // Set shader settings
     dim3 grid(WIDTH/TILE_SIZE, HEIGHT/TILE_SIZE), block(TILE_SIZE, TILE_SIZE);
@@ -473,8 +471,6 @@ bool PolyRenderer::render(){
     cudaerr(cudaMemcpy((void*) lights_d, (void*) _lights.data(), sizeof(Light) * _lights.size(), cudaMemcpyHostToDevice));
     scene.lights = PolyArray<Light*>(lights_d, _lights.size());
 
-    // TODO textures
-
     BVHNode* bvh_d;
     cudaerr(cudaMalloc((void**) &bvh_d, sizeof(BVHNode) * _nextNode));
     cudaerr(cudaMemcpy((void*) bvh_d, (void*) _bvh, sizeof(BVHNode) * _nextNode, cudaMemcpyHostToDevice));
@@ -493,6 +489,7 @@ bool PolyRenderer::render(){
     fflush(stdout);
     cudaerr(cudaEventRecord(tIni, 0));
 
+    // Launch rendering kernel
     compute_pixel<<<grid, block>>> (frame_d, scene_d);
     shaderStatus = cudaGetLastError();
 
@@ -501,13 +498,17 @@ bool PolyRenderer::render(){
         cudaerr(cudaEventRecord(tEnd, 0));
         cudaerr(cudaEventSynchronize(tEnd));
         cudaerr(cudaEventElapsedTime(&tGpu, tIni, tEnd));
-        cudaerr(cudaMemcpy((void*) _frame, (void*) frame_d, RENDERING_TOTAL_SIZE, cudaMemcpyDeviceToHost));
+        cudaerr(cudaMemcpy((void*) _frame, (void*) frame_d, FRAME_SIZE, cudaMemcpyDeviceToHost));
         printf("\e[1;95m%.3fs \e[92mOK\e[0m\n", tGpu * 1e-3f);
     } else {
         printf("\e[1;91mERR! %s\e[0m\n", cudaGetErrorString(shaderStatus));
     }
 
     // Free resources and reset GPU
+    for(Material mat : _mats){
+        if(mat.texture) cudaerr(cudaDestroyTextureObject(mat.texture));
+        if(mat.bump) cudaerr(cudaDestroyTextureObject(mat.bump));
+    }
     for(cudaArray_t array : _cuArrays)
         cudaerr(cudaFreeArray(array));
     cudaFree(frame_d); cudaFree(scene_d); 

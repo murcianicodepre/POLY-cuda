@@ -10,11 +10,12 @@ materials:
     diffuse: 0.0
     specular: 0.0
   - name: "mat1"
-    texture: "textures/cobblestone.png"
-    bump: "textures/cobblestone_bump.png"
+    texture: "textures/beso.png"
     diffuse: 2.0
     specular: 32.0
-    refractive: 1.5
+    reflective: 0.5
+    refractive: 1.333
+
 
 
 objects:
@@ -28,10 +29,11 @@ objects:
       move: [0.0, 0.0, 3.0]
 
   - name: "obj"
-    file: "models/sphere.ply"
+    file: "models/cube.ply"
     material: "mat1"
     transforms:
-      move: [0.0, 0.0, 2.0]
+      scale: 0.5
+      move: [0.0, -0.5, 2.0]
 
 lights:
   - type: directional

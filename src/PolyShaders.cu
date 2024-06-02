@@ -12,7 +12,9 @@ struct Entry {
     Ray ray;
     Hit hit;
     Vec4 color;
-    bool hasIntersection = false, hasReflection = false, hasRefraction = false;
+    uint8_t reflection, refraction;
+    __device__ Entry() : ray(), hit(), color(), reflection(0u), refraction(0u) {}
+    __device__ Entry(Ray ray) : ray(ray), hit(), color(), reflection(0u), refraction(0u) {}
 };
 
 // Main pixel rendering entrypoint
@@ -21,65 +23,60 @@ __global__ void compute_pixel(RGBA* frame, Scene* scene){
     // Get global pixel coordinates
     uint2 pixelCoord = make_uint2(blockIdx.x * blockDim.x + threadIdx.x, blockIdx.y * blockDim.y + threadIdx.y);
 
-    // Rendering loop
-    Entry stack[MAX_RAY_BOUNCES + 1];
-    uint8_t i=0;
-    stack[i++] = { .ray = scene->cam->rayTo(pixelCoord.x, pixelCoord.y) };
-    while(i>0){
-        Entry& entry = stack[i-1];
+    // Rendering loop: push entries until all the info for the color of the first entry is computed
+    Entry stack[MAX_RAY_BOUNCES+1];
+    uint8_t ptr = 0;
+    stack[ptr++] = Entry(scene->cam->rayTo(pixelCoord.x, pixelCoord.y));
+    while(ptr>0){
+        uint8_t i = ptr-1;
+        Entry& entry = stack[ptr-1];
 
-        if(!entry.hasIntersection)
-            entry.hasIntersection = intersection_shader(entry.ray, entry.hit, scene);
+        // Perform intersection test one single time
+        if(!(entry.hit.t<__FLT_MAX__))
+            intersection_shader(entry.ray, entry.hit, scene);
 
-        if(entry.hasIntersection){
+        if(entry.hit.t<__FLT_MAX__){
             Hit& hit = entry.hit;
             Tri& tri = scene->tris.data[hit.triId];
             Material& mat = scene->mats.data[tri.matId];
-            uint16_t flags16 = scene->global | tri.flags;
-            uint8_t cont = i-1;
+            uint16_t flags16 = (scene->global | tri.flags);
+            Vec3 rdir;
 
-            // REFLECTION STEP
-            if((i<=MAX_RAY_BOUNCES) && (!entry.hasReflection) && (mat.reflective>0.0f) && !(flags16 & DISABLE_REFLECTIONS)){
-                entry.hasReflection = true;
-                Vec3 rdir = hit.ray.dir - hit.phong * (Vec3::dot(hit.ray.dir, hit.phong) * 2.0f);
-                Ray rray = Ray(hit.point(), rdir); rray.medium = tri.matId;
-                stack[i++] = { .ray = rray};
+            // REFLECTION step
+            if(!(entry.reflection) && (ptr<=MAX_RAY_BOUNCES) && (mat.reflective>0.0f) && !(flags16 & DISABLE_REFLECTIONS)){
+                entry.reflection = ptr+1;
+                rdir = hit.ray.dir - hit.phong * (Vec3::dot(hit.ray.dir, hit.phong) * 2.0f);
+                stack[ptr++] = Entry(Ray(hit.point(), rdir, tri.matId));
             }
 
-            // REFRACTION STEP
-            if((i<=MAX_RAY_BOUNCES) && (!entry.hasRefraction) && (mat.refractive<1.0f || mat.refractive>1.0f) && !(flags16 & DISABLE_REFRACTIONS)){
-                entry.hasRefraction = true;
-
-                Material& oldMat = scene->mats.data[entry.hit.ray.medium];
-                
+            // REFRACTION step
+            if(!(entry.refraction) && (ptr<=MAX_RAY_BOUNCES) && (mat.refractive>1.0f || mat.refractive<1.0f) && !(flags16 & DISABLE_REFRACTIONS)){
+                entry.refraction = ptr+1;
+                Material& oldMat = scene->mats.data[hit.ray.medium];
                 float cosTheta1 = Vec3::dot(hit.ray.dir, hit.phong) * -1.0f, theta1 = acosf(cosTheta1);
                 float sinTheta2 = (oldMat.refractive / mat.refractive) * sinf(theta1);
 
-                Ray rray;
+                // Refraction or internal reflection
+                rdir = (sinTheta2<1.0f) ? (hit.ray.dir + hit.phong * cosTheta1) * (oldMat.refractive / mat.refractive) - hit.phong * cosTheta1 :
+                    hit.ray.dir - hit.phong * (Vec3::dot(hit.ray.dir, hit.phong) * 2.0f);
 
-                if(sinTheta2<1.0f){
-                    // Refraction
-                    Vec3 rdir = (hit.ray.dir + hit.phong * cosTheta1) * (oldMat.refractive / mat.refractive) - hit.phong * cosTheta1;
-                    rray = Ray(hit.point(), rdir); rray.medium = tri.matId;
-                } else {
-                    // Internal reflection
-                    Vec3 rdir = hit.ray.dir - hit.phong * (Vec3::dot(hit.ray.dir, hit.phong) * 2.0f);
-                    rray = Ray(hit.point(), rdir); rray.medium = tri.matId;
-                }
-
-                stack[i++] = { .ray = rray };
+                stack[ptr++] = Entry(Ray(hit.point(), rdir, tri.matId));
             }
 
-            // Check if all child entries have been resolved
-            if(cont == (i-1)){
-                Vec4 frag = (entry.hasRefraction) ? fragment_shader(entry.hit, scene, DISABLE_SHADING) : fragment_shader(hit, scene);
-                Vec4 color = ((entry.hasRefraction) ? stack[i].color * frag * Vec3(0.9f) : frag) * Vec3(1.0f - mat.reflective) + stack[i].color * Vec3(mat.reflective);
-                
-                stack[--i].color = color;
-
+            // Compute color of this entry if no more entries were added
+            if(i==(ptr-1)){
+                Vec4 color = (entry.refraction && (stack[entry.refraction-1].hit.t<__FLT_MAX__)) ? 
+                    stack[entry.refraction-1].color * fragment_shader(hit,scene,DISABLE_SHADING) * Vec3(0.9f): 
+                    fragment_shader(hit,scene);
+                Vec4 reflection = (entry.reflection && (stack[entry.reflection-1].hit.t<__FLT_MAX__)) ? 
+                    stack[entry.reflection-1].color * Vec3(0.9f) : 
+                    Vec4();
+                entry.color = color * Vec3(1.0f-mat.reflective) + reflection * Vec3(mat.reflective);
+                ptr--;
             }
-        } else i--;
+        } else ptr--;
     }
+
     frame[pixelCoord.x + pixelCoord.y * WIDTH] = RGBA(stack[0].color);
     
     // Wait in a barrier until all threads have finished

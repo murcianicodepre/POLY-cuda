@@ -1,3 +1,4 @@
+
 # duck demo
 
 camera:
@@ -8,15 +9,18 @@ materials:
   
   - name: "duck_mat"
     texture: "textures/duck.png"
+    color: [255,255,0]
     bump: "textures/duck_bump.png"
     diffuse: 2.0
     specular: 32.0
-    refractive: 1.5
-  - name: "floormat"
-    texture: "textures/demo_texture.png"
+    
+  - name: "mat"
+    color: [0,255,0]
     diffuse: 2.0
     specular: 32.0
-    reflective: 0.2
+    refractive: 1.333
+    reflective: 0.5
+
   - name: "sky_mat"
     texture: "textures/sky3.png"
     diffuse: 2.0
@@ -38,13 +42,13 @@ objects:
       rotate: [0.0, 30.0, 0.0]
       move: [0.0, -0.2, 2.0]
 
-  - name: "floor"
-    file: "models/quad2.ply"
-    material: "floormat"
+  - name: "cube"
+    file: "models/cube.ply"
+    material: mat
     transforms:
-      scale: 5.0
-      rotate: [90.0, 0.0, 0.0]
-      move: [0.0, -0.21, 2.0]
+      scale: 0.37
+      rotate: [0.0, 30.0, 0.0]
+      move: [0.0, -0.2, 2.0]
 
 lights:
   - type: directional
