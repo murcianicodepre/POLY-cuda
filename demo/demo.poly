@@ -10,13 +10,9 @@ materials:
     diffuse: 0.0
     specular: 0.0
   - name: "mat1"
-    texture: "textures/beso.png"
+    texture: "textures/pc-jo.png"
     diffuse: 2.0
     specular: 32.0
-    reflective: 0.5
-    refractive: 1.333
-
-
 
 objects:
   - name: "sky"
@@ -33,6 +29,7 @@ objects:
     material: "mat1"
     transforms:
       scale: 0.5
+      rotate: [0.0, -45.0, 0.0]
       move: [0.0, -0.5, 2.0]
 
 lights:

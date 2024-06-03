@@ -65,10 +65,10 @@ __global__ void compute_pixel(RGBA* frame, Scene* scene){
 
             // Compute color of this entry if no more entries were added
             if(i==(ptr-1)){
-                Vec4 color = (entry.refraction && (stack[entry.refraction-1].hit.t<__FLT_MAX__)) ? 
+                Vec4 color = ((entry.refraction>0) && (entry.refraction<MAX_RAY_BOUNCES+1) && (stack[entry.refraction-1].hit.t<__FLT_MAX__)) ? 
                     stack[entry.refraction-1].color * fragment_shader(hit,scene,DISABLE_SHADING) * Vec3(0.9f): 
                     fragment_shader(hit,scene);
-                Vec4 reflection = (entry.reflection && (stack[entry.reflection-1].hit.t<__FLT_MAX__)) ? 
+                Vec4 reflection = ((entry.reflection>0) && (entry.reflection<MAX_RAY_BOUNCES+1) && (stack[entry.reflection-1].hit.t<__FLT_MAX__)) ? 
                     stack[entry.reflection-1].color * Vec3(0.9f) : 
                     Vec4();
                 entry.color = color * Vec3(1.0f-mat.reflective) + reflection * Vec3(mat.reflective);
@@ -186,19 +186,30 @@ __device__ Vec3 flat_shading(Hit& hit){
 
 // Computes fragment color for a given hit
 __device__ Vec4 fragment_shader(Hit& hit, Scene* scene, uint8_t flags){
-    Tri& tri = scene->tris.data[hit.triId];
-    Material& mat = scene->mats.data[tri.matId];
-    uint16_t flags16 = (tri.flags | flags | scene->global);
+    Hit aux = hit;
+    Vec4 frag;
+    while(aux.t<__FLT_MAX__){
+        Tri& tri = scene->tris.data[aux.triId];
+        Material& mat = scene->mats.data[tri.matId];
+        uint16_t flags16 = (tri.flags | flags | scene->global);
 
-    // TEXTURE MAPPING step
-    Vec4 tex = (!(flags16 & DISABLE_TEXTURES) && !((flags16>>8) & FLAT_SHADING)) ?
-                texture_mapping(hit, mat) :
-                Vec4(mat.color);
+        // TEXTURE MAPPING step
+        Vec4 tex = (!(flags16 & DISABLE_TEXTURES) && !((flags16>>8) & FLAT_SHADING)) ? texture_mapping(aux, mat) : Vec4(mat.color);
 
-    // SHADING step
-    Vec3 shading = ((flags16 >> 8) & FLAT_SHADING) ? flat_shading(hit) : blinn_phong_shading(hit, scene, flags);
+        // SHADING step
+        Vec3 shading = ((flags16 >> 8) & FLAT_SHADING) ? flat_shading(aux) : blinn_phong_shading(aux, scene, flags);
 
-    return tex * shading;
+        // Compute fragment before alpha blending
+        frag = frag + (tex * shading) * Vec3(tex.w);
+
+        // ALPHA BLENDING step
+        if(!(flags16 & DISABLE_TRANSPARENCY) && tex.w<1.0f){
+            Ray rray = Ray(aux.point(), aux.ray.dir, tri.matId);
+            aux = Hit();
+            intersection_shader(rray, aux, scene);
+        } else aux = Hit();
+    }
+    return frag;
 }
 
 // Maps a texture pixel to a hit

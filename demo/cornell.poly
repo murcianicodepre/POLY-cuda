@@ -1,4 +1,5 @@
 # cornell demo 
+
 camera:
   position: [0.0, 0.0, 0.0]
   fov: 40.0
@@ -11,10 +12,9 @@ materials:
     specular: 32.0
   - name: "mat2"
     color: [0,255,0]
-    #bump: "textures/concrete_bump.png"
+    bump: "textures/concrete_bump.png"
     diffuse: 2.0
     specular: 32.0
-    reflective: 1.0
   - name: "mat3"
     color: [200,200,200]
     bump: "textures/concrete_bump.png"
@@ -28,10 +28,9 @@ materials:
     refractive: 1.333
   - name: "mirror1"
     color: [255,255,255]
-    bump: "textures/metal_bump.png"
     diffuse: 2.0
     specular: 32.0
-    reflective: 0.5
+    reflective: 1.0
     refractive: 1.333
 
   - name: "mirror2"
@@ -121,7 +120,7 @@ objects:
     transforms:
       scale: [0.2, 0.4, 0.2]
       rotate: [0.0, -20.0, 0.0]
-      move: [-0.25, -0.6, 2.3]
+      move: [-0.25, -0.6, 2.2]
 
   - name: "block2"
     file: "models/cube.ply"

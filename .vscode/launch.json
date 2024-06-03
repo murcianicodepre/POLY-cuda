@@ -6,7 +6,7 @@
             "type": "cuda-gdb",
             "request": "launch",
             "program": "${workspaceRoot}/poly-cuda",
-            "args": "-i=demo/duck.poly",
+            "args": "-i=demo/demo.poly",
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],
