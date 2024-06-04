@@ -17,6 +17,7 @@ __device__ bool BVHNode::intersectAABB(Ray& ray){
 }
 
 void PolyRenderer::buildBVH(){
+    printf("\e[1;93m compiling bvh: \e[95m"); fflush(stdout);
     _bvh = (BVHNode*) malloc(sizeof(BVHNode) * 2 * _tris.size() - 1);
     _triIdx = (uint32_t*) malloc(sizeof(uint32_t) * _tris.size());
     for(uint32_t i=0; i<_tris.size(); i++) 
@@ -26,16 +27,21 @@ void PolyRenderer::buildBVH(){
     BVHNode& root = _bvh[0];
     root.n = _tris.size(); root.leftOrFirst = 0u;
 
+    // Register building time
+    float tini = static_cast<float>(omp_get_wtime()), tbuild;
+
     updateNodeBounds(0);    // Update bounds of root node
     subdivide(0);           // Start subdivision
+
+    tbuild = static_cast<float>(omp_get_wtime()) - tini;
 
     // Resize with only the leaf nodes
     std::vector<BVHNode> leaf;
     for(uint32_t i=0; i<_nextNode; i++)
         if(_bvh[i].n > 0){ leaf.push_back(_bvh[i]); }
 
-    // Print size of _bvh structure
-    PolyRenderer::polyMsg("\e[1;93m compiling bvh: \e[95m" + to_string(_nextNode) + " \e[93mnodes (\e[95m" + to_string(_nextNode*sizeof(BVHNode)) + " bytes\e[93m) \e[92mOK\e[0m\n");
+    // Print size and building time
+    printf("%s \e[93mnodes (\e[95m%s bytes\e[93m) \e[95m%.3fs \e[92mOK\e[0m\n", to_string(_nextNode).c_str(), to_string(_nextNode*sizeof(BVHNode)).c_str(), tbuild);
 }
 
 void PolyRenderer::updateNodeBounds(uint32_t nodeId){
@@ -52,20 +58,68 @@ void PolyRenderer::updateNodeBounds(uint32_t nodeId){
     }
 }
 
+float PolyRenderer::EvaluateSAH(BVHNode& node, uint8_t axis, float pos){
+    Vec3 leftAABBMin, leftAABBMax, rightAABBMin, rightAABBMax;
+    uint32_t leftCount = 0u, rightCount = 0u;
+    for(uint32_t i=node.leftOrFirst; i<node.leftOrFirst+node.n; i++){
+        Tri& tri = _tris[_triIdx[i]];
+        if(tri.centroid()[axis] < pos){
+            leftCount++;
+            leftAABBMin = Vec3::min(leftAABBMin, tri.a.xyz); leftAABBMax = Vec3::max(leftAABBMin, tri.a.xyz);
+            leftAABBMin = Vec3::min(leftAABBMin, tri.b.xyz); leftAABBMax = Vec3::max(leftAABBMin, tri.b.xyz);
+            leftAABBMin = Vec3::min(leftAABBMin, tri.c.xyz); leftAABBMax = Vec3::max(leftAABBMin, tri.c.xyz);
+        } else {
+            rightCount++;
+            rightAABBMin = Vec3::min(rightAABBMin, tri.a.xyz); rightAABBMax = Vec3::max(rightAABBMin, tri.a.xyz);
+            rightAABBMin = Vec3::min(rightAABBMin, tri.b.xyz); rightAABBMax = Vec3::max(rightAABBMin, tri.b.xyz);
+            rightAABBMin = Vec3::min(rightAABBMin, tri.c.xyz); rightAABBMax = Vec3::max(rightAABBMin, tri.c.xyz);
+        }
+    }
+    Vec3 e = leftAABBMax-leftAABBMin;
+    float leftArea = e.x*e.y + e.y*e.z + e.z*e.x;
+    float cost = leftCount*leftArea;
+
+    e = rightAABBMax-rightAABBMin;
+    float rightArea = e.x*e.y + e.y*e.z + e.z*e.x;
+    cost += rightCount*rightArea;
+
+    return (cost > 0.0f) ? cost : __FLT_MAX__;
+}
+
+__host__ float PolyRenderer::getBestSplit(BVHNode& node, uint8_t& axis, float& split){
+    float bestCost = __FLT_MAX__;
+    for(uint8_t a = 0; a<3; a++){
+        float minBounds = node.aabbMin[a], maxBounds = node.aabbMax[a];
+        if(minBounds==maxBounds) continue;
+        float s = (maxBounds-minBounds) / SPLIT_PLANES;
+        for(uint8_t i=0; i<SPLIT_PLANES; i++){
+            float candidatePos = minBounds + i*s;
+            float cost = EvaluateSAH(node, a, candidatePos);
+            if(cost<bestCost){
+                split = candidatePos, axis = a, bestCost = cost;
+            }
+        }
+    }
+    return bestCost;
+}
+__host__ float PolyRenderer::getNodeCost(BVHNode& node){
+    Vec3 e = node.aabbMax - node.aabbMin;
+    float area = e.x*e.y + e.y*e.z + e.z*e.x;
+    return node.n * area;
+}
+
 void PolyRenderer::subdivide(uint32_t nodeId){
     BVHNode& node = _bvh[nodeId];
     if(node.n<=2) return;  // Terminate recursive subdivision
 
-    // Get split axis
-    Vec3 ext = node.aabbMax - node.aabbMin;
-    uint8_t axis = 0u;
-    if(ext.y > ext.x) axis = 1;
-    if(ext.z > ext[axis]) axis = 2;
+    // SAH: https://jacco.ompf2.com/2022/04/18/how-to-build-a-bvh-part-2-faster-rays/
+    uint8_t axis;
+    float split, cost = getBestSplit(node, axis, split);
 
-    float split = node.aabbMin[axis] + ext[axis] * 0.5f;
+    if(cost >= getNodeCost(node)) return;
 
     // Split the geometry in two parts
-    uint32_t i = node.leftOrFirst, j = i + node.n - 1;
+    int64_t i = node.leftOrFirst, j = i + node.n - 1;
     while(i<=j){
         Tri& tri = _tris[_triIdx[i]];
         if(tri.centroid()[axis]<split) i++;

@@ -28,10 +28,10 @@ materials:
     refractive: 1.333
   - name: "mirror1"
     color: [255,255,255]
+    bump: "textures/metal_bump.png"
     diffuse: 2.0
     specular: 32.0
-    reflective: 1.0
-    refractive: 1.333
+    reflective: 0.2
 
   - name: "mirror2"
     color: [255,255,255]
@@ -138,7 +138,7 @@ objects:
       rotate: [0.0, -30.0, 0.0]
       move: [-0.1, -0.59, 1.8]
 
-  - name: "ball"
+  - name: "sphere"
     file: "models/sphere.ply"
     material: "mirror2"
     transforms:

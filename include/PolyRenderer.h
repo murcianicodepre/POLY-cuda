@@ -75,6 +75,9 @@ public:
     __host__ void buildBVH();
     __host__ void updateNodeBounds(uint32_t nodeId);
     __host__ void subdivide(uint32_t nodeId);
+    __host__ float EvaluateSAH(BVHNode&, uint8_t, float);
+    __host__ float getBestSplit(BVHNode&, uint8_t&, float&);
+    __host__ float getNodeCost(BVHNode&);
 
     // Other renderer functions
     static RGBA* loadPNG(const char* path);

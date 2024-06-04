@@ -15,11 +15,9 @@ materials:
     specular: 32.0
     
   - name: "mat"
-    color: [0,255,0]
+    texture: "textures/demo_texture.png"
     diffuse: 2.0
     specular: 32.0
-    refractive: 1.333
-    reflective: 0.5
 
   - name: "sky_mat"
     texture: "textures/sky3.png"
@@ -32,6 +30,7 @@ objects:
     material: "sky_mat"
     flags:
       - DISABLE_SHADING
+      - DISABLE_RENDERING
     transforms:
       scale: 3.0
       move: [0.0, 0.0, 2.0]
@@ -42,13 +41,14 @@ objects:
       rotate: [0.0, 30.0, 0.0]
       move: [0.0, -0.2, 2.0]
 
-  - name: "cube"
-    file: "models/cube.ply"
-    material: mat
+  - name: "floor"
+    file: "models/quad.ply"
+    material: "mat"
     transforms:
-      scale: 0.37
-      rotate: [0.0, 30.0, 0.0]
+      scale: 2.0
+      rotate: [90.0, 0.0, 0.0]
       move: [0.0, -0.2, 2.0]
+
 
 lights:
   - type: directional

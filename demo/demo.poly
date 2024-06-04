@@ -32,6 +32,14 @@ objects:
       rotate: [0.0, -45.0, 0.0]
       move: [0.0, -0.5, 2.0]
 
+  - name: "obj2"
+    file: "models/cube.ply"
+    material: "mat1"
+    transforms:
+      scale: 0.7
+      rotate: [0.0, -45.0, 0.0]
+      move: [0.0, -0.5, 3.0]
+
 lights:
   - type: directional
     direction: [0.5, 0.5, -1.0]

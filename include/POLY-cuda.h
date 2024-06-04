@@ -19,6 +19,7 @@
 #include "yaml-cpp/exceptions.h"
 #include "cuda_runtime.h"
 #include "cuda_texture_types.h"
+#include "omp.h"
 
 using namespace std;
 
@@ -45,6 +46,7 @@ constexpr uint8_t TILE_SIZE = 16;
 constexpr float AR = 1.33333f;
 constexpr uint8_t MAX_RAY_BOUNCES = 255;
 constexpr uint16_t BVH_STACK_SIZE = 33u; // log2(MAX_TRIS * 2)
+constexpr uint8_t SPLIT_PLANES = 128u;
 
 // Individual tri rendering flags
 constexpr uint8_t DISABLE_RENDERING = 0x01u;
