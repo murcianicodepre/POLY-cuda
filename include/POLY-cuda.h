@@ -59,8 +59,8 @@ constexpr uint8_t DISABLE_REFLECTIONS = 0x40u;
 constexpr uint8_t DISABLE_REFRACTIONS = 0x80u;
 
 // Rendering pipeline flags
-// constexpr uint8_t DISABLE_FAST_INTERSECTION_SHADER = 0x01u;
-constexpr uint8_t FLAT_SHADING = 0x02u;
+constexpr uint8_t FLAT_SHADING = 0x01u;
+constexpr uint8_t DISABLE_SAH = 0x02u;
 
 // Math defs
 constexpr float PI = 3.14159264f;

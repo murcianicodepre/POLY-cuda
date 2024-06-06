@@ -10,7 +10,7 @@ materials:
     diffuse: 0.0
     specular: 0.0
   - name: "mat1"
-    texture: "textures/pc-jo.png"
+    texture: "textures/beso.png"
     diffuse: 2.0
     specular: 32.0
 
@@ -20,25 +20,16 @@ objects:
     material: "sky_mat"
     flags:
       - DISABLE_SHADING
+      - DISABLE_RENDERING
     transforms:
       scale: 5.0
       move: [0.0, 0.0, 3.0]
 
   - name: "obj"
-    file: "models/cube.ply"
+    file: "models/quad.ply"
     material: "mat1"
     transforms:
-      scale: 0.5
-      rotate: [0.0, -45.0, 0.0]
-      move: [0.0, -0.5, 2.0]
-
-  - name: "obj2"
-    file: "models/cube.ply"
-    material: "mat1"
-    transforms:
-      scale: 0.7
-      rotate: [0.0, -45.0, 0.0]
-      move: [0.0, -0.5, 3.0]
+      move: [0.0, 0.0, 2.0]
 
 lights:
   - type: directional

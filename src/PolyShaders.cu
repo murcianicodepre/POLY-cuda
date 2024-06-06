@@ -65,12 +65,13 @@ __global__ void compute_pixel(RGBA* frame, Scene* scene){
 
             // Compute color of this entry if no more entries were added
             if(i==(ptr-1)){
-                Vec4 color = ((entry.refraction>0) && (entry.refraction<MAX_RAY_BOUNCES+1) && (stack[entry.refraction-1].hit.t<__FLT_MAX__)) ? 
+                Vec4 frag = fragment_shader(hit, scene);
+                Vec4 color = (!(flags16 & DISABLE_REFRACTIONS) && (entry.refraction>0) && (entry.refraction<MAX_RAY_BOUNCES+1) && (stack[entry.refraction-1].hit.t<__FLT_MAX__)) ? 
                     stack[entry.refraction-1].color * fragment_shader(hit,scene,DISABLE_SHADING) * Vec3(0.9f): 
-                    fragment_shader(hit,scene);
-                Vec4 reflection = ((entry.reflection>0) && (entry.reflection<MAX_RAY_BOUNCES+1) && (stack[entry.reflection-1].hit.t<__FLT_MAX__)) ? 
+                    frag;
+                Vec4 reflection = (!(flags16 & DISABLE_REFLECTIONS) && (entry.reflection>0) && (entry.reflection<MAX_RAY_BOUNCES+1) && (stack[entry.reflection-1].hit.t<__FLT_MAX__)) ? 
                     stack[entry.reflection-1].color * Vec3(0.9f) : 
-                    Vec4();
+                    frag;
                 entry.color = color * Vec3(1.0f-mat.reflective) + reflection * Vec3(mat.reflective);
                 ptr--;
             }
@@ -215,7 +216,7 @@ __device__ Vec4 fragment_shader(Hit& hit, Scene* scene, uint8_t flags){
 // Maps a texture pixel to a hit
 __device__ Vec4 texture_mapping(Hit& hit, Material& mat){
     uint2 pixelCoord = make_uint2(blockIdx.x * blockDim.x + threadIdx.x, blockIdx.y * blockDim.y + threadIdx.y);
-    return (mat.texture) ? Vec4(tex2D<float4>(mat.texture, hit.u, hit.v)) : Vec4(mat.color);
+    return (mat.texture) ? Vec4(tex2D<float4>(mat.texture, hit.u, 1.0f-hit.v)) : Vec4(mat.color);
 }
 
 // Computes hit surface normal using a bump texture
@@ -228,9 +229,9 @@ __device__ Vec3 bump_mapping(Hit& hit, Tri& tri, Material& mat){
         float f = 1.0f / (du1 * dv2 - du2 * dv1);
 
         Vec3 tangent = Vec3(f * (dv2 * e1.x - dv1 * e2.x), f * (dv2 * e1.y - dv1 * e2.y), f * (dv2 * e1.z - dv1 * e2.z)).normalize();
-        Vec3 bitangent = Vec3(f * (du2 * e1.x - du1 * e2.x), f * (du2 * e1.y - du1 * e2.y), f * (du2 * e1.z - du1 * e2.z)).normalize();
+        Vec3 bitangent = Vec3(f * (-du2 * e1.x + du1 * e2.x), f * (-du2 * e1.y + du1 * e2.y), f * (-du2 * e1.z + du1 * e2.z)).normalize();
 
-        Vec3 bumpMap = Vec3(tex2D<float4>(mat.bump, hit.u, hit.v)) * 2.0f - 1.0f;
+        Vec3 bumpMap = Vec3(tex2D<float4>(mat.bump, hit.u, 1.0f-hit.v)) * 2.0f - 1.0f;
 
         return (tangent * bumpMap.x + bitangent * bumpMap.y + hit.phong * bumpMap.z).normalize();
     } else return hit.phong;

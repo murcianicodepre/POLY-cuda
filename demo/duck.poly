@@ -35,15 +35,17 @@ objects:
       scale: 3.0
       move: [0.0, 0.0, 2.0]
   - name: "duck"
-    file: "models/duck2.ply"
+    file: "models/duck.ply"
     material: "duck_mat"
     transforms:
-      rotate: [0.0, 30.0, 0.0]
+      #rotate: [0.0, 30.0, 0.0]
       move: [0.0, -0.2, 2.0]
 
   - name: "floor"
     file: "models/quad.ply"
     material: "mat"
+    flags:
+      - DISABLE_RENDERING
     transforms:
       scale: 2.0
       rotate: [90.0, 0.0, 0.0]

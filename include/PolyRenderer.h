@@ -88,7 +88,7 @@ public:
     static void polyMsg(std::string msg);
     static Vec3 parseVec3(YAML::Node node);
     static RGBA parseColor(YAML::Node node);
-    static uint16_t parseFlags(YAML::Node node);
+    static uint16_t parseFlags(YAML::Node node, bool print = false);
 }; 
 
 // Cuda related functions

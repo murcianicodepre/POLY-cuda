@@ -35,11 +35,6 @@ void PolyRenderer::buildBVH(){
 
     tbuild = static_cast<float>(omp_get_wtime()) - tini;
 
-    // Resize with only the leaf nodes
-    std::vector<BVHNode> leaf;
-    for(uint32_t i=0; i<_nextNode; i++)
-        if(_bvh[i].n > 0){ leaf.push_back(_bvh[i]); }
-
     // Print size and building time
     printf("%s \e[93mnodes (\e[95m%s bytes\e[93m) \e[95m%.3fs \e[92mOK\e[0m\n", to_string(_nextNode).c_str(), to_string(_nextNode*sizeof(BVHNode)).c_str(), tbuild);
 }
@@ -112,11 +107,20 @@ void PolyRenderer::subdivide(uint32_t nodeId){
     BVHNode& node = _bvh[nodeId];
     if(node.n<=2) return;  // Terminate recursive subdivision
 
-    // SAH: https://jacco.ompf2.com/2022/04/18/how-to-build-a-bvh-part-2-faster-rays/
     uint8_t axis;
-    float split, cost = getBestSplit(node, axis, split);
+    float split, cost;
 
-    if(cost >= getNodeCost(node)) return;
+    // Build using base split or SAH + split planes
+    if((_global>>8) & DISABLE_SAH){
+        Vec3 ext = node.aabbMax - node.aabbMin;
+        axis = 0u;
+        if(ext.y > ext.x) axis = 1u;
+        if(ext.z > ext[axis]) axis = 2u;
+        split = node.aabbMin[axis] + ext[axis] * 0.5f;
+    } else {
+        cost = getBestSplit(node, axis, split);
+        if(cost >= getNodeCost(node)) return;
+    }
 
     // Split the geometry in two parts
     int64_t i = node.leftOrFirst, j = i + node.n - 1;
@@ -319,7 +323,7 @@ __host__ RGBA PolyRenderer::parseColor(YAML::Node node){
         return RGBA(node[0].as<uint8_t>(), node[1].as<uint8_t>(), node[2].as<uint8_t>(), node[3] ? node[3].as<uint8_t>() : 255u);
     } else throw runtime_error("\e[1;91m  err parsing RGBA\e[0m\n");
 }
-__host__ uint16_t PolyRenderer::parseFlags(YAML::Node node){
+__host__ uint16_t PolyRenderer::parseFlags(YAML::Node node, bool print){
     uint16_t flags = 0x0000u;
     for(auto f : node){
         string flag = f.as<string>();
@@ -339,12 +343,15 @@ __host__ uint16_t PolyRenderer::parseFlags(YAML::Node node){
             flags |= DISABLE_REFLECTIONS;
         else if(flag=="DISABLE_REFRACTIONS")
             flags |= DISABLE_REFRACTIONS;
-        else if(flag=="FLAT_SHADING"){
-            PolyRenderer::polyMsg("\e[1;96m  FLAT_SHADING\e[0m\n");
+        else if(flag=="FLAT_SHADING")
             flags |= (FLAT_SHADING<<8);
+        else if(flag=="DISABLE_SAH"){
+            flags |= (DISABLE_SAH<<8);
         }
         else PolyRenderer::polyMsg("\e[1;96m  err unknown flag '" + string(flag) + "'\e[0m\n");
         
+        if(print)
+            PolyRenderer::polyMsg("\e[1;96m  " + string(flag) + "\e[0m\n");
     }
     return flags;
 }
@@ -363,7 +370,7 @@ bool PolyRenderer::loadScene(const char* scene){
 
         // Parse global flags
         if(file["global"])
-            _global = (parseFlags(file["global"]) & 0xffffu);
+            _global = (parseFlags(file["global"], true) & 0xffffu);
         
         // Parse camera
         if(file["camera"]){

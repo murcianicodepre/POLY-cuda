@@ -102,7 +102,7 @@ Poly::Poly(const char* path, uint8_t matId, uint8_t flags){
                 iss >> element; u = stof(element); iss >> element; v = stof(element);
             } else { u = v = 0.0f; }
 
-            Vertex vertex = Vertex(Vec3(x,y,z), Vec3(nx,ny,nz), u, 1.0f-v);
+            Vertex vertex = Vertex(Vec3(x,y,z), Vec3(nx,ny,nz), u, v);
             vertices.push_back(vertex);
 
         } else {        // Read tri data. Check if the line starts whith a 3
