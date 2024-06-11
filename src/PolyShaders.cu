@@ -13,7 +13,7 @@ struct Entry {
     Hit hit;
     Vec4 color;
     uint8_t reflection, refraction;
-    __device__ Entry() : ray(), hit(), color(), reflection(0u), refraction(0u) {}
+    __device__ Entry() : ray(), hit(), color(), reflection(0u), refraction(0u){}
     __device__ Entry(Ray ray) : ray(ray), hit(), color(), reflection(0u), refraction(0u) {}
 };
 
@@ -29,7 +29,7 @@ __global__ void compute_pixel(RGBA* frame, Scene* scene){
     stack[ptr++] = Entry(scene->cam->rayTo(pixelCoord.x, pixelCoord.y));
     while(ptr>0){
         uint8_t i = ptr-1;
-        Entry& entry = stack[ptr-1];
+        Entry& entry = stack[i];
 
         // Perform intersection test one single time
         if(!(entry.hit.t<__FLT_MAX__))
@@ -42,14 +42,14 @@ __global__ void compute_pixel(RGBA* frame, Scene* scene){
             uint16_t flags16 = (scene->global | tri.flags);
             Vec3 rdir;
 
-            // REFLECTION step
+            // REFLECTION step: push reflection ray entry to compute this entry
             if(!(entry.reflection) && (ptr<=MAX_RAY_BOUNCES) && (mat.reflective>0.0f) && !(flags16 & DISABLE_REFLECTIONS)){
                 entry.reflection = ptr+1;
                 rdir = hit.ray.dir - hit.phong * (Vec3::dot(hit.ray.dir, hit.phong) * 2.0f);
                 stack[ptr++] = Entry(Ray(hit.point(), rdir, tri.matId));
             }
 
-            // REFRACTION step
+            // REFRACTION step: push refraction ray entry to compute this entry
             if(!(entry.refraction) && (ptr<=MAX_RAY_BOUNCES) && (mat.refractive>1.0f || mat.refractive<1.0f) && !(flags16 & DISABLE_REFRACTIONS)){
                 entry.refraction = ptr+1;
                 Material& oldMat = scene->mats.data[hit.ray.medium];
@@ -65,19 +65,27 @@ __global__ void compute_pixel(RGBA* frame, Scene* scene){
 
             // Compute color of this entry if no more entries were added
             if(i==(ptr-1)){
-                Vec4 frag = fragment_shader(hit, scene);
+                Vec4 frag = compute_fragment(hit, scene);
                 Vec4 color = (!(flags16 & DISABLE_REFRACTIONS) && (entry.refraction>0) && (entry.refraction<MAX_RAY_BOUNCES+1) && (stack[entry.refraction-1].hit.t<__FLT_MAX__)) ? 
-                    stack[entry.refraction-1].color * fragment_shader(hit,scene,DISABLE_SHADING) * Vec3(0.9f): 
+                    stack[entry.refraction-1].color * compute_fragment(hit,scene,DISABLE_SHADING) * Vec3(0.9f): 
                     frag;
                 Vec4 reflection = (!(flags16 & DISABLE_REFLECTIONS) && (entry.reflection>0) && (entry.reflection<MAX_RAY_BOUNCES+1) && (stack[entry.reflection-1].hit.t<__FLT_MAX__)) ? 
                     stack[entry.reflection-1].color * Vec3(0.9f) : 
                     frag;
-                entry.color = color * Vec3(1.0f-mat.reflective) + reflection * Vec3(mat.reflective);
-                ptr--;
+
+                // Alpha blending step: if this entry final color has some transparency, push new entry in the same place and add this partial color
+                if(frag.w<1.0f){
+                    stack[i] = Entry(Ray(hit.point(), hit.ray.dir, tri.matId));
+                    stack[i].color = color * Vec3(1.0f-mat.reflective) + reflection * Vec3(mat.reflective);
+                } else {    // Else store color and pop entry
+                    entry.color = entry.color + (color * Vec3(1.0f-mat.reflective) + reflection * Vec3(mat.reflective));
+                    ptr--;   
+                }
             }
         } else ptr--;
     }
 
+    // Write color into pixel
     frame[pixelCoord.x + pixelCoord.y * WIDTH] = RGBA(stack[0].color);
     
     // Wait in a barrier until all threads have finished
@@ -158,11 +166,12 @@ __device__ Vec3 blinn_phong_shading(Hit& hit, Scene* scene, uint8_t flags){
 
             // Compute if geometry exists between the fragment and the light origin
             if(!(flags16 & DISABLE_SHADOWS)){
-                Vec3 sori = Vec3::dot(ldir, hit.normal) < 0.0f ? hit.point() + hit.phong * EPSILON : hit.point() - hit.phong * EPSILON;
+                Vec3 sori = Vec3::dot(ldir, hit.normal) < 0.0f ? hit.point() + hit.normal * EPSILON : hit.point() - hit.normal * EPSILON;
                 Ray lray = Ray(sori, ldir);
                 Hit aux;
                 float t = (lpos - sori).x / ldir.x;
-                if(intersection_shader(lray, aux, scene, DISABLE_SHADING | DISABLE_SHADOWS) && (aux.t < t)) continue;
+                if(intersection_shader(lray, aux, scene, DISABLE_SHADING | DISABLE_SHADOWS) && (aux.t < t) && 
+                  (texture_mapping(aux, mats[tris[aux.triId].matId]).w==1.0f)) continue;
             }
 
             // Compute specular and diffuse components
@@ -186,34 +195,21 @@ __device__ Vec3 flat_shading(Hit& hit){
 }
 
 // Computes fragment color for a given hit
-__device__ Vec4 fragment_shader(Hit& hit, Scene* scene, uint8_t flags){
-    Hit aux = hit;
-    Vec4 frag;
-    while(aux.t<__FLT_MAX__){
-        Tri& tri = scene->tris.data[aux.triId];
-        Material& mat = scene->mats.data[tri.matId];
-        uint16_t flags16 = (tri.flags | flags | scene->global);
+__device__ Vec4 compute_fragment(Hit& hit, Scene* scene, uint8_t flags){
+    Tri& tri = scene->tris.data[hit.triId];
+    Material& mat = scene->mats.data[tri.matId];
+    uint16_t flags16 = (tri.flags | flags | scene->global);
 
-        // TEXTURE MAPPING step
-        Vec4 tex = (!(flags16 & DISABLE_TEXTURES) && !((flags16>>8) & FLAT_SHADING)) ? texture_mapping(aux, mat) : Vec4(mat.color);
+    // TEXTURE MAPPING step
+    Vec4 tex = (!(flags16 & DISABLE_TEXTURES) && !((flags16>>8) & FLAT_SHADING)) ? texture_mapping(hit, mat) : Vec4(mat.color);
 
-        // SHADING step
-        Vec3 shading = ((flags16 >> 8) & FLAT_SHADING) ? flat_shading(aux) : blinn_phong_shading(aux, scene, flags);
+    // SHADING step
+    Vec3 shading = ((flags16 >> 8) & FLAT_SHADING) ? flat_shading(hit) : blinn_phong_shading(hit, scene, flags);
 
-        // Compute fragment before alpha blending
-        frag = frag + (tex * shading) * Vec3(tex.w);
-
-        // ALPHA BLENDING step
-        if(!(flags16 & DISABLE_TRANSPARENCY) && tex.w<1.0f){
-            Ray rray = Ray(aux.point(), aux.ray.dir, tri.matId);
-            aux = Hit();
-            intersection_shader(rray, aux, scene);
-        } else aux = Hit();
-    }
-    return frag;
+    return tex * shading;
 }
 
-// Maps a texture pixel to a hit
+// Maps texel to hit point
 __device__ Vec4 texture_mapping(Hit& hit, Material& mat){
     uint2 pixelCoord = make_uint2(blockIdx.x * blockDim.x + threadIdx.x, blockIdx.y * blockDim.y + threadIdx.y);
     return (mat.texture) ? Vec4(tex2D<float4>(mat.texture, hit.u, 1.0f-hit.v)) : Vec4(mat.color);

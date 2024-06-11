@@ -35,14 +35,11 @@ __device__ bool Tri::intersect(Ray ray, Hit& hit){
 
         hit.t = t;
         hit.normal = normal;
-
+        hit.phong = !(a.normal == 0.0f && b.normal == 0.0f && c.normal == 0.0f) ? (a.normal*(1.0f-U-V) + b.normal*U + c.normal*V).normalize() : normal;
         hit.ray = ray;
         hit.u = (1.0f-U-V) * a.u + U * b.u + V * c.u;
         hit.v = (1.0f-U-V) * a.v + U * b.v + V * c.v;
-
-        // Compute interpolated normal
-        hit.phong = !(a.normal == 0.0f && b.normal == 0.0f && c.normal == 0.0f) ? (a.normal*(1.0f-U-V) + b.normal*U + c.normal*V).normalize() : hit.normal;
-
+        
         return true;
     } else return false;
 }
