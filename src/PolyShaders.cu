@@ -74,7 +74,7 @@ __global__ void compute_pixel(RGBA* frame, Scene* scene){
                     frag;
 
                 // Alpha blending step: if this entry final color has some transparency, push new entry in the same place and add this partial color
-                if(frag.w<1.0f){
+                if(frag.w<1.0f && !(flags16 & DISABLE_TRANSPARENCY)){
                     stack[i] = Entry(Ray(hit.point(), hit.ray.dir, tri.matId));
                     stack[i].color = color * Vec3(1.0f-mat.reflective) + reflection * Vec3(mat.reflective);
                 } else {    // Else store color and pop entry

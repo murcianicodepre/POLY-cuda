@@ -86,10 +86,12 @@ __host__ float PolyRenderer::getBestSplit(BVHNode& node, uint8_t& axis, float& s
     for(uint8_t a = 0; a<3; a++){
         float minBounds = node.aabbMin[a], maxBounds = node.aabbMax[a];
         if(minBounds==maxBounds) continue;
-        float s = (maxBounds-minBounds) / SPLIT_PLANES;
-        for(uint8_t i=0; i<SPLIT_PLANES; i++){
+        float s = (maxBounds-minBounds) / _splits;
+
+        for(uint32_t i=0; i<_splits; i++){
             float candidatePos = minBounds + i*s;
             float cost = EvaluateSAH(node, a, candidatePos);
+
             if(cost<bestCost){
                 split = candidatePos, axis = a, bestCost = cost;
             }
@@ -371,6 +373,12 @@ bool PolyRenderer::loadScene(const char* scene){
         // Parse global flags
         if(file["global"])
             _global = (parseFlags(file["global"], true) & 0xffffu);
+
+        // Parse split planes if present
+        if(file["split_planes"] && !((_global>>8) & DISABLE_SAH)){
+            _splits = file["split_planes"].as<uint32_t>();
+            PolyRenderer::polyMsg("\e[1;96m  SPLIT_PLANES = " + to_string(_splits) + "\e[0m\n");
+        }
         
         // Parse camera
         if(file["camera"]){
@@ -513,6 +521,7 @@ bool PolyRenderer::render(){
 
     // Copy scene data into GPU memory
     Scene scene, * scene_d; 
+    scene.global = _global;
 
     cudaerr(cudaMalloc((void**) &scene.cam, sizeof(Camera)));
     cudaerr(cudaMemcpy((void*) scene.cam, (void*) _cam, sizeof(Camera), cudaMemcpyHostToDevice));

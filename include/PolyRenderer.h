@@ -71,7 +71,7 @@ public:
     void save(const char* path);
 
     // Acceleration struct
-    uint32_t _nextNode = 1, * _triIdx = nullptr;
+    uint32_t _nextNode = 1, * _triIdx = nullptr, _splits = 128u;
     __host__ void buildBVH();
     __host__ void updateNodeBounds(uint32_t nodeId);
     __host__ void subdivide(uint32_t nodeId);
