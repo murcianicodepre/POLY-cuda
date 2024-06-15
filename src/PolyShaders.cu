@@ -44,14 +44,14 @@ __global__ void compute_pixel(RGBA* frame, Scene* scene){
 
             // REFLECTION step: push reflection ray entry to compute this entry
             if(!(entry.reflection) && (ptr<=MAX_RAY_BOUNCES) && (mat.reflective>0.0f) && !(flags16 & DISABLE_REFLECTIONS)){
-                entry.reflection = ptr+1;
+                entry.reflection = ptr;
                 rdir = hit.ray.dir - hit.phong * (Vec3::dot(hit.ray.dir, hit.phong) * 2.0f);
-                stack[ptr++] = Entry(Ray(hit.point(), rdir, tri.matId));
+                stack[ptr++] = Entry(Ray(hit.point(), rdir, 0u));
             }
 
             // REFRACTION step: push refraction ray entry to compute this entry
             if(!(entry.refraction) && (ptr<=MAX_RAY_BOUNCES) && (mat.refractive>1.0f || mat.refractive<1.0f) && !(flags16 & DISABLE_REFRACTIONS)){
-                entry.refraction = ptr+1;
+                entry.refraction = ptr;
                 Material& oldMat = scene->mats.data[hit.ray.medium];
                 float cosTheta1 = Vec3::dot(hit.ray.dir, hit.phong) * -1.0f, theta1 = acosf(cosTheta1);
                 float sinTheta2 = (oldMat.refractive / mat.refractive) * sinf(theta1);
@@ -66,11 +66,11 @@ __global__ void compute_pixel(RGBA* frame, Scene* scene){
             // Compute color of this entry if no more entries were added
             if(i==(ptr-1)){
                 Vec4 frag = compute_fragment(hit, scene);
-                Vec4 color = (!(flags16 & DISABLE_REFRACTIONS) && (entry.refraction>0) && (entry.refraction<MAX_RAY_BOUNCES+1) && (stack[entry.refraction-1].hit.t<__FLT_MAX__)) ? 
-                    stack[entry.refraction-1].color * compute_fragment(hit,scene,DISABLE_SHADING) * Vec3(0.9f): 
+                Vec4 color = (!(flags16 & DISABLE_REFRACTIONS) && (entry.refraction>0) && (entry.refraction<MAX_RAY_BOUNCES+1) && (stack[entry.refraction].hit.t<__FLT_MAX__)) ? 
+                    stack[entry.refraction].color * compute_fragment(hit,scene,DISABLE_SHADING) * Vec3(0.9f): 
                     frag;
-                Vec4 reflection = (!(flags16 & DISABLE_REFLECTIONS) && (entry.reflection>0) && (entry.reflection<MAX_RAY_BOUNCES+1) && (stack[entry.reflection-1].hit.t<__FLT_MAX__)) ? 
-                    stack[entry.reflection-1].color * Vec3(0.9f) : 
+                Vec4 reflection = (!(flags16 & DISABLE_REFLECTIONS) && (entry.reflection>0) && (entry.reflection<MAX_RAY_BOUNCES+1) && (stack[entry.reflection].hit.t<__FLT_MAX__)) ? 
+                    stack[entry.reflection].color * Vec3(0.9f) : 
                     frag;
 
                 // Alpha blending step: if this entry final color has some transparency, push new entry in the same place and add this partial color
@@ -80,7 +80,7 @@ __global__ void compute_pixel(RGBA* frame, Scene* scene){
                 } else {    // Else store color and pop entry
                     entry.color = entry.color + (color * Vec3(1.0f-mat.reflective) + reflection * Vec3(mat.reflective));
                     ptr--;   
-                }
+                }                
             }
         } else ptr--;
     }

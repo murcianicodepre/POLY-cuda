@@ -38,7 +38,7 @@ struct Hit{
     Vec3 normal, phong, bump;
     float u = 0.0f, v = 0.0f, t = __FLT_MAX__;
     Ray ray;
-    __device__ Hit() : normal(), phong(), bump(), u(0.0f), v(0.0f), t(__FLT_MAX__), ray() {}
+    __device__ Hit() : normal(0.0f), phong(0.0f), bump(0.0f), u(0.0f), v(0.0f), t(__FLT_MAX__), ray() {}
     __device__ Vec3 point(){ return ray.point(t); }
 };
 
