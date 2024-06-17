@@ -39,12 +39,11 @@ struct Scene {
     PolyArray<Tri*> tris;
     PolyArray<Material*> mats;
     PolyArray<Light*> lights;
-    PolyArray<cudaTextureObject_t*> textures;
     BVHNode* bvh;
     uint32_t* triIdx;
     uint16_t global;
 
-    Scene() : cam(nullptr), tris(nullptr, 0), mats(nullptr, 0), lights(nullptr, 0), textures(nullptr, 0), bvh(nullptr), triIdx(nullptr), global(0x0000u) {}
+    Scene() : cam(nullptr), tris(nullptr, 0), mats(nullptr, 0), lights(nullptr, 0), bvh(nullptr), triIdx(nullptr), global(0x0000u) {}
 };
 
 // Main renderer class

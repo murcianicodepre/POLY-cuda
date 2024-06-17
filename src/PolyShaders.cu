@@ -66,10 +66,10 @@ __global__ void compute_pixel(RGBA* frame, Scene* scene){
             // Compute color of this entry if no more entries were added
             if(i==(ptr-1)){
                 Vec4 frag = compute_fragment(hit, scene);
-                Vec4 color = (!(flags16 & DISABLE_REFRACTIONS) && (entry.refraction>0) && (entry.refraction<MAX_RAY_BOUNCES+1) && (stack[entry.refraction].hit.t<__FLT_MAX__)) ? 
+                Vec4 color = (!(flags16 & DISABLE_REFRACTIONS) && (entry.refraction>0) && (entry.refraction<MAX_RAY_BOUNCES) && (stack[entry.refraction].hit.t<__FLT_MAX__)) ? 
                     stack[entry.refraction].color * compute_fragment(hit,scene,DISABLE_SHADING) * Vec3(1.0f - (i*RAY_BOUNCE_ATT)): 
                     frag;
-                Vec4 reflection = (!(flags16 & DISABLE_REFLECTIONS) && (entry.reflection>0) && (entry.reflection<MAX_RAY_BOUNCES+1) && (stack[entry.reflection].hit.t<__FLT_MAX__)) ? 
+                Vec4 reflection = (!(flags16 & DISABLE_REFLECTIONS) && (entry.reflection>0) && (entry.reflection<MAX_RAY_BOUNCES) && (stack[entry.reflection].hit.t<__FLT_MAX__)) ? 
                     stack[entry.reflection].color * Vec3(1.0f - (i*RAY_BOUNCE_ATT)) : 
                     frag;
 
