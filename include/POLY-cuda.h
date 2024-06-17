@@ -44,7 +44,8 @@ constexpr uint16_t HEIGHT = 960;
 constexpr uint16_t TEXTURE_SIZE = 1024;
 constexpr uint8_t TILE_SIZE = 16;
 constexpr float AR = 1.33333f;
-constexpr uint8_t MAX_RAY_BOUNCES = 255;
+constexpr uint8_t MAX_RAY_BOUNCES = 64u;
+constexpr float RAY_BOUNCE_ATT = 1.0f / static_cast<float>(MAX_RAY_BOUNCES);
 constexpr uint16_t BVH_STACK_SIZE = 33u; // log2(MAX_TRIS * 2)
 constexpr uint8_t SPLIT_PLANES = 64u;
 

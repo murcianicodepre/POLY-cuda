@@ -24,7 +24,7 @@ __global__ void compute_pixel(RGBA* frame, Scene* scene){
     uint2 pixelCoord = make_uint2(blockIdx.x * blockDim.x + threadIdx.x, blockIdx.y * blockDim.y + threadIdx.y);
 
     // Rendering loop: push entries until all the info for the color of the first entry is computed
-    Entry stack[MAX_RAY_BOUNCES+1];
+    Entry stack[MAX_RAY_BOUNCES];
     uint8_t ptr = 0;
     stack[ptr++] = Entry(scene->cam->rayTo(pixelCoord.x, pixelCoord.y));
     while(ptr>0){
@@ -67,10 +67,10 @@ __global__ void compute_pixel(RGBA* frame, Scene* scene){
             if(i==(ptr-1)){
                 Vec4 frag = compute_fragment(hit, scene);
                 Vec4 color = (!(flags16 & DISABLE_REFRACTIONS) && (entry.refraction>0) && (entry.refraction<MAX_RAY_BOUNCES+1) && (stack[entry.refraction].hit.t<__FLT_MAX__)) ? 
-                    stack[entry.refraction].color * compute_fragment(hit,scene,DISABLE_SHADING) * Vec3(0.9f): 
+                    stack[entry.refraction].color * compute_fragment(hit,scene,DISABLE_SHADING) * Vec3(1.0f - (i*RAY_BOUNCE_ATT)): 
                     frag;
                 Vec4 reflection = (!(flags16 & DISABLE_REFLECTIONS) && (entry.reflection>0) && (entry.reflection<MAX_RAY_BOUNCES+1) && (stack[entry.reflection].hit.t<__FLT_MAX__)) ? 
-                    stack[entry.reflection].color * Vec3(0.9f) : 
+                    stack[entry.reflection].color * Vec3(1.0f - (i*RAY_BOUNCE_ATT)) : 
                     frag;
 
                 // Alpha blending step: if this entry final color has some transparency, push new entry in the same place and add this partial color
