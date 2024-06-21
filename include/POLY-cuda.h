@@ -48,6 +48,8 @@ constexpr uint8_t MAX_RAY_BOUNCES = 64u;
 constexpr float RAY_BOUNCE_ATT = 1.0f / static_cast<float>(MAX_RAY_BOUNCES);
 constexpr uint16_t BVH_STACK_SIZE = 33u; // log2(MAX_TRIS * 2)
 constexpr uint8_t SPLIT_PLANES = 64u;
+constexpr uint8_t REFLECTION_COMPUTED = 0x1u;
+constexpr uint8_t REFRACTION_COMPUTED = 0x2u;
 
 // Individual tri rendering flags
 constexpr uint8_t DISABLE_RENDERING = 0x01u;
