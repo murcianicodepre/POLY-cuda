@@ -44,6 +44,12 @@ float Vec3::dot(Vec3 a, Vec3 b){ return a.x*b.x + a.y*b.y + a.z*b.z; }
 Vec3 Vec3::cross(Vec3 a, Vec3 b){ return Vec3(a.y*b.z - a.z*b.y, a.z*b.x - a.x*b.z, a.x*b.y - a.y*b.x); }
 Vec3 Vec3::max(Vec3 a, Vec3 b){ return Vec3(a.x >= b.x ? a.x : b.x, a.y >= b.y ? a.y : b.y, a.z >= b.z ? a.z : b.z); }
 Vec3 Vec3::min(Vec3 a, Vec3 b){ return Vec3(a.x <= b.x ? a.x : b.x, a.y <= b.y ? a.y : b.y, a.z <= b.z ? a.z : b.z); }
+Vec3 Vec3::clamp(float max, float min){
+    x = (x>max) ? max : ((x<min) ? min : x);
+    y = (y>max) ? max : ((y<min) ? min : y);
+    z = (z>max) ? max : ((z<min) ? min : z);
+    return Vec3(x,y,z);
+}
 
 Vec4::Vec4() : x(0.0f), y(0.0f), z(0.0f), w(0.0f) {}
 Vec4::Vec4(float f) : x(f), y(f), z(f), w(f) {}
@@ -65,3 +71,10 @@ Vec4 Vec4::operator*(float f){ return Vec4(x*f, y*f, z*f, w*f); }
 Vec4 Vec4::operator*(Vec4 v){ return Vec4(x*v.x, y*v.y, z*v.z, w*v.w); }
 Vec4 Vec4::operator*(Vec3 v){ return Vec4(x*v.x, y*v.y, z*v.z, w); }
 bool Vec4::operator==(float f) { return x==f && y==f && z==f && w==f; }
+Vec4 Vec4::clamp(float max, float min){
+    x = (x>max) ? max : ((x<min) ? min : x);
+    y = (y>max) ? max : ((y<min) ? min : y);
+    z = (z>max) ? max : ((z<min) ? min : z);
+    w = (w>max) ? max : ((w<min) ? min : w);
+    return Vec4(x,y,z,w);
+}

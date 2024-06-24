@@ -36,14 +36,15 @@ public:
 // Contains all the scene data for the GPU
 struct Scene {
     Camera* cam;
-    PolyArray<Tri*> tris;
-    PolyArray<Material*> mats;
-    PolyArray<Light*> lights;
+    Tri* tris;
+    Material* mats;
+    Light* lights;
+    uint8_t nLights;
     BVHNode* bvh;
     uint32_t* triIdx;
     uint16_t global;
 
-    Scene() : cam(nullptr), tris(nullptr, 0), mats(nullptr, 0), lights(nullptr, 0), bvh(nullptr), triIdx(nullptr), global(0x0000u) {}
+    Scene() : cam(nullptr), tris(nullptr), mats(nullptr), lights(nullptr), nLights(0u), bvh(nullptr), triIdx(nullptr), global(0x0000u) {}
 };
 
 // Main renderer class

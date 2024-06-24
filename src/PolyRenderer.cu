@@ -405,7 +405,7 @@ bool PolyRenderer::loadScene(const char* scene){
                     reflect = (reflect>1.0f) ? 1.0f : (reflect<0.0f ? 0.0f : reflect);
                     Material mat = Material(diff, spec, reflect, refract);
                     if(m["texture"]) _cuArrays.push_back(mat.loadTexture((script_path + m["texture"].as<string>()).c_str())); 
-                    mat.color = (m["color"]) ? parseColor(m["color"]) : RGBA(Vec3(0.8f, 0.8f, 0.8f), 1.0f);
+                    mat.color = (m["color"]) ? parseColor(m["color"]) : RGBA(204u,204u,204u,255u);
                     if(m["bump"]) _cuArrays.push_back(mat.loadBump((script_path + m["bump"].as<string>()).c_str()));
 
                     // Push material and name at same index
@@ -529,17 +529,17 @@ bool PolyRenderer::render(){
     Tri* tris_d;
     cudaerr(cudaMalloc((void**) &tris_d, sizeof(Tri) * _tris.size()));
     cudaerr(cudaMemcpy((void*) tris_d, (void*) _tris.data(), sizeof(Tri) * _tris.size(), cudaMemcpyHostToDevice));
-    scene.tris = PolyArray<Tri*>(tris_d, _tris.size());
+    scene.tris = tris_d;
 
     Material* mats_d;
     cudaerr(cudaMalloc((void**) &mats_d, sizeof(Material) * _mats.size()));
     cudaerr(cudaMemcpy((void*) mats_d, (void*) _mats.data(), sizeof(Material) * _mats.size(), cudaMemcpyHostToDevice));
-    scene.mats = PolyArray<Material*>(mats_d, _mats.size());
+    scene.mats = mats_d;
 
     Light* lights_d;
     cudaerr(cudaMalloc((void**) &lights_d, sizeof(Light) * _lights.size()));
     cudaerr(cudaMemcpy((void*) lights_d, (void*) _lights.data(), sizeof(Light) * _lights.size(), cudaMemcpyHostToDevice));
-    scene.lights = PolyArray<Light*>(lights_d, _lights.size());
+    scene.lights = lights_d; scene.nLights = _lights.size();
 
     BVHNode* bvh_d;
     cudaerr(cudaMalloc((void**) &bvh_d, sizeof(BVHNode) * _nextNode));

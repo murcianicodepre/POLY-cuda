@@ -35,6 +35,7 @@ public:
     __host__ __device__ static Vec3 cross(Vec3, Vec3);
     __host__ __device__ static Vec3 max(Vec3, Vec3);
     __host__ __device__ static Vec3 min(Vec3, Vec3);
+    __host__ __device__ Vec3 clamp(float max, float min);
 };
 
 class Vec4 {
@@ -56,6 +57,7 @@ public:
     __host__ __device__ Vec4 operator*(Vec4);
     __host__ __device__ Vec4 operator*(Vec3);
     __host__ __device__ bool operator==(float);
+    __host__ __device__ Vec4 clamp(float max, float min);
 };
 
 #endif

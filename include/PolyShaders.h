@@ -13,6 +13,8 @@ __device__ bool intersection_shader(Ray&, Hit&, Scene*, uint8_t discard = 0x00u)
 __device__ Vec3 blinn_phong_shading(Hit&, Scene*, uint8_t flags = 0x00u);
 __device__ Vec3 flat_shading(Hit&);
 __device__ Vec4 compute_fragment(Hit&, Scene*, uint8_t flags = 0x00u);
+__device__ Ray compute_reflection(Hit&, Scene*);
+__device__ Ray compute_refraction(Hit&, Scene*);
 __device__ Vec4 texture_mapping(Hit&, Material&);
 __device__ Vec3 bump_mapping(Hit&, Tri&, Material&);
 

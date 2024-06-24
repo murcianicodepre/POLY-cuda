@@ -40,6 +40,7 @@ struct Hit{
     Ray ray;
     __device__ Hit() : normal(0.0f), phong(0.0f), bump(0.0f), u(0.0f), v(0.0f), t(__FLT_MAX__), ray() {}
     __device__ Vec3 point(){ return ray.point(t); }
+    __device__ bool valid(){ return t < __FLT_MAX__; }
 };
 
 // Tri class
