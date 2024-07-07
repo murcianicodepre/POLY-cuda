@@ -152,7 +152,6 @@ __device__ Vec3 blinn_phong_shading(Hit& hit, Scene* scene, uint8_t flags){
                 dist = (lpos - hit.point()).length();
                 att = 1.0f / (1.0f + 0.14f * dist + 0.07f * (dist * dist));
             } else if(l.type==LightType::Directional){
-                lpos = Vec3(1000.0f);
                 ldir = l.dirPos.normalize();
                 dist = __FLT_MAX__;
                 att = 1.0f;
@@ -163,9 +162,8 @@ __device__ Vec3 blinn_phong_shading(Hit& hit, Scene* scene, uint8_t flags){
                 Vec3 sori = Vec3::dot(ldir, hit.normal) < 0.0f ? hit.point() + hit.normal * EPSILON : hit.point() - hit.normal * EPSILON;
                 Ray lray = Ray(sori, ldir);
                 Hit aux;
-                float t = (lpos - sori).x / ldir.x;
-                if(intersection_shader(lray, aux, scene, DISABLE_SHADING | DISABLE_SHADOWS) && (aux.t < t) /*&& 
-                  (texture_mapping(aux, mats[tris[aux.triId].matId]).w==1.0f)*/) continue;
+                float t = (l.type==LightType::Point) ? (lpos - sori).x / ldir.x : __FLT_MAX__;
+                if(intersection_shader(lray, aux, scene, DISABLE_SHADING | DISABLE_SHADOWS) && (aux.t < t)) continue;
             }
 
             // Compute specular and diffuse components
